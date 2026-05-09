@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Property Lead Tracker Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        primary: '#4f46e5',
+                        secondary: '#10b981',
+                        dark: '#111827',
+                        light: '#f9fafb'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar & Kanban Styles */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        .kanban-col { min-height: 400px; }
+        .dragging { opacity: 0.5; }
+        .kanban-dropzone { transition: background-color 0.2s; }
+        .kanban-dropzone.drag-over { background-color: #e0e7ff; border: 2px dashed #4f46e5; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans h-screen overflow-hidden flex flex-col">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2"></div>
+
+    <!-- Payment Modal -->
+    <div id="payment-modal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">Pendaftaran Berhasil!</h2>
+                <p class="text-gray-500 mt-2">Satu langkah lagi untuk mengaktifkan akun Anda.</p>
+            </div>
+            
+            <div class="bg-blue-50 rounded-xl p-5 mb-6 border border-blue-100">
+                <p class="text-sm text-gray-700 mb-3 font-medium">Silahkan lakukan pembayaran ke rekening berikut:</p>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
+                        <div class="flex items-center gap-3">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/5c/Bank_Central_Asia.svg" alt="BCA" class="h-6 object-contain">
+                            <span class="font-bold text-gray-800 tracking-wider">5745452563</span>
+                        </div>
+                        <button onclick="copyToClipboard('5745452563')" class="text-blue-500 hover:text-blue-700"><i class="fa-regular fa-copy"></i></button>
+                    </div>
+                    <div class="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
+                        <div class="flex items-center gap-3">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/a/a0/Bank_Syariah_Indonesia.svg" alt="BSI" class="h-6 object-contain">
+                            <span class="font-bold text-gray-800 tracking-wider">9897867570</span>
+                        </div>
+                        <button onclick="copyToClipboard('9897867570')" class="text-blue-500 hover:text-blue-700"><i class="fa-regular fa-copy"></i></button>
+                    </div>
+                    <p class="text-sm text-gray-600">a.n <strong class="text-gray-800">Hardi Hanto</strong></p>
+                </div>
+                <div class="mt-4 pt-4 border-t border-blue-200">
+                    <p class="text-sm text-gray-600">Total Pembayaran (+Kode Unik):</p>
+                    <div class="flex items-end gap-1 mt-1">
+                        <span class="text-lg font-semibold">Rp 349.</span>
+                        <span id="unique-code" class="text-2xl font-bold text-primary"></span>
+                    </div>
+                    <p class="text-xs text-red-500 mt-1 italic">*Pastikan transfer sesuai nominal di atas hingga 3 digit terakhir.</p>
+                </div>
+            </div>
+            <p class="text-center text-sm font-medium text-gray-700 mb-6">
+                Mohon konfirmasinya jika sudah transfer ya kak🙏😊
+            </p>
+            <button onclick="closePaymentModal()" class="w-full bg-primary hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-lg shadow-indigo-200">
+                Saya Mengerti & Akan Transfer
+            </button>
+        </div>
+    </div>
+
+    <!-- Authentication Container -->
+    <div id="auth-view" class="flex-1 flex items-center justify-center bg-[url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-center">
+        <div class="absolute inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm"></div>
+        
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden z-10 mx-4">
+            <div class="p-8">
+                <div class="text-center mb-8">
+                    <div class="inline-flex items-center justify-center w-14 h-14 bg-indigo-100 text-primary rounded-xl mb-4">
+                        <i class="fa-solid fa-building-user text-2xl"></i>
+                    </div>
+                    <h1 class="text-2xl font-bold text-gray-800">Lead Tracker <span class="text-primary">Pro</span></h1>
+                    <p class="text-sm text-gray-500 mt-1">Sistem Manajemen Properti Anti-Berantakan</p>
+                </div>
+
+                <!-- Login Form -->
+                <form id="login-form" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email / Username</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-regular fa-envelope text-gray-400"></i>
+                            </div>
+                            <input type="text" id="login-email" class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl focus:ring-primary focus:border-primary text-sm" placeholder="Masukkan email / Admin!">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-solid fa-lock text-gray-400"></i>
+                            </div>
+                            <input type="password" id="login-password" class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl focus:ring-primary focus:border-primary text-sm" placeholder="••••••••">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-primary hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-xl transition-all shadow-md">
+                        Masuk Dashboard
+                    </button>
+                    <p class="text-center text-sm text-gray-600 mt-4">
+                        Belum punya akun? <a href="#" onclick="toggleAuthView()" class="text-primary font-semibold hover:underline">Daftar sekarang</a>
+                    </p>
+                </form>
+
+                <!-- Register Form (Hidden by default) -->
+                <form id="register-form" class="space-y-4 hidden">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                        <input type="text" id="reg-name" class="block w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-primary focus:border-primary text-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email Aktif</label>
+                        <input type="email" id="reg-email" class="block w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-primary focus:border-primary text-sm" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="reg-password" class="block w-full px-3 py-2.5 border border-gray-300 rounded-xl focus:ring-primary focus:border-primary text-sm" required minlength="6">
+                    </div>
+                    <button type="submit" class="w-full bg-secondary hover:bg-emerald-600 text-white font-semibold py-2.5 rounded-xl transition-all shadow-md mt-2">
+                        Daftar & Aktivasi
+                    </button>
+                    <p class="text-center text-sm text-gray-600 mt-4">
+                        Sudah punya akun? <a href="#" onclick="toggleAuthView()" class="text-primary font-semibold hover:underline">Masuk</a>
+                    </p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="waiting-view" class="hidden flex-1 flex flex-col items-center justify-center bg-gray-50 p-6">
+        <div class="bg-white p-8 rounded-2xl shadow-sm text-center max-w-md w-full border border-gray-100">
+            <i class="fa-solid fa-hourglass-half text-5xl text-yellow-500 mb-4 animate-pulse"></i>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Menunggu Approval</h2>
+            <p class="text-gray-600 mb-6">Akun Anda sedang ditinjau oleh Admin. Jika Anda sudah melakukan transfer, mohon tunggu sebentar hingga admin mengaktifkan akun Anda.</p>
+            <button onclick="handleLogout()" class="px-6 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg font-medium transition-colors">
+                Keluar
+            </button>
+        </div>
+    </div>
+
+    <div id="admin-view" class="hidden flex-1 flex flex-col bg-gray-50 h-full">
+        <header class="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="bg-red-100 text-red-600 p-2 rounded-lg"><i class="fa-solid fa-shield-halved"></i></div>
+                <h1 class="text-xl font-bold text-gray-800">Admin Control Panel</h1>
+            </div>
+            <button onclick="handleLogout()" class="text-gray-500 hover:text-red-500 flex items-center gap-2 font-medium">
+                <i class="fa-solid fa-right-from-bracket"></i> Keluar
+            </button>
+        </header>
+        <main class="p-6 flex-1 overflow-auto">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-5 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                    <h2 class="font-semibold text-gray-800">Manajemen Pengguna (Guru/Agen)</h2>
+                    <button onclick="fetchUsersForAdmin()" class="text-sm text-primary hover:underline"><i class="fa-solid fa-rotate-right mr-1"></i> Refresh</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-white border-b border-gray-200 text-sm text-gray-500 uppercase tracking-wider">
+                                <th class="p-4 font-medium">Nama</th>
+                                <th class="p-4 font-medium">Email</th>
+                                <th class="p-4 font-medium">Tanggal Daftar</th>
+                                <th class="p-4 font-medium">Status</th>
+                                <th class="p-4 font-medium">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-users-list" class="text-sm divide-y divide-gray-100">
+                            <!-- Injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="agent-view" class="hidden flex-1 h-full flex overflow-hidden bg-gray-50">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0">
+            <div class="p-6 border-b border-gray-100 flex items-center gap-3">
+                <div class="bg-primary text-white p-2 rounded-lg"><i class="fa-solid fa-chart-pie"></i></div>
+                <div>
+                    <h2 class="font-bold text-gray-800 leading-tight">Lead Tracker</h2>
+                    <span class="text-xs text-primary font-semibold tracking-wider uppercase">Pro Edition</span>
+                </div>
+            </div>
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+                <a href="#" onclick="switchTab('dashboard')" id="nav-dashboard" class="flex items-center gap-3 px-4 py-3 rounded-xl text-primary bg-indigo-50 font-medium transition-colors nav-item">
+                    <i class="fa-solid fa-house w-5"></i> Dashboard Utama
+                </a>
+                <a href="#" onclick="switchTab('database')" id="nav-database" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 font-medium transition-colors nav-item">
+                    <i class="fa-solid fa-database w-5"></i> Database Leads
+                </a>
+                <a href="#" onclick="switchTab('kanban')" id="nav-kanban" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 font-medium transition-colors nav-item">
+                    <i class="fa-solid fa-list-check w-5"></i> Kanban Pipeline
+                </a>
+                <a href="#" onclick="switchTab('calculator')" id="nav-calculator" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-50 font-medium transition-colors nav-item">
+                    <i class="fa-solid fa-calculator w-5"></i> Kalkulator Komisi
+                </a>
+            </nav>
+            <div class="p-4 border-t border-gray-100">
+                <div class="flex items-center gap-3 mb-4 px-2">
+                    <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold" id="user-avatar">U</div>
+                    <div class="overflow-hidden">
+                        <p class="text-sm font-semibold text-gray-800 truncate" id="user-display-name">Agent Name</p>
+                        <p class="text-xs text-gray-500 truncate" id="user-display-email">email@example.com</p>
+                    </div>
+                </div>
+                <button onclick="handleLogout()" class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium">
+                    <i class="fa-solid fa-power-off"></i> Keluar
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-auto p-8 relative">
+            
+            <div id="tab-dashboard" class="tab-content block">
+                <h1 class="text-2xl font-bold text-gray-800 mb-6">Overview Performa</h1>
+                
+                <!-- Stat Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-users"></i></div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Total Leads</p>
+                            <p class="text-2xl font-bold text-gray-800" id="stat-total-leads">0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-sack-dollar"></i></div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Potensi Closing (Won)</p>
+                            <p class="text-2xl font-bold text-gray-800" id="stat-won-value">Rp 0</p>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex items-center gap-4">
+                        <div class="w-14 h-14 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xl shrink-0"><i class="fa-solid fa-fire"></i></div>
+                        <div>
+                            <p class="text-sm text-gray-500 font-medium">Leads Aktif (Pipeline)</p>
+                            <p class="text-2xl font-bold text-gray-800" id="stat-active-leads">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Follow Up Reminders -->
+                    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-[400px]">
+                        <div class="p-5 border-b border-gray-100 bg-gray-50 flex items-center gap-2 shrink-0">
+                            <i class="fa-regular fa-bell text-yellow-500"></i>
+                            <h3 class="font-semibold text-gray-800">Reminder Follow Up Otomatis</h3>
+                        </div>
+                        <div class="p-5 flex-1 overflow-y-auto">
+                            <ul id="reminder-list" class="space-y-3">
+                                <!-- Injected via JS -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Chart Performa Iklan -->
+                    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-[400px]">
+                        <div class="p-5 border-b border-gray-100 bg-gray-50 flex items-center gap-2 shrink-0">
+                            <i class="fa-solid fa-chart-line text-primary"></i>
+                            <h3 class="font-semibold text-gray-800">Statistik Sumber Leads</h3>
+                        </div>
+                        <div class="p-5 flex-1 flex items-center justify-center relative">
+                            <canvas id="sourceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-database" class="tab-content hidden h-full flex flex-col">
+                <div class="flex justify-between items-center mb-6 shrink-0">
+                    <h1 class="text-2xl font-bold text-gray-800">Database Leads Utama</h1>
+                    <button onclick="openLeadModal()" class="bg-primary hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Tambah Lead
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm flex-1 flex flex-col min-h-0 overflow-hidden">
+                    <div class="overflow-x-auto flex-1">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-gray-50 sticky top-0 z-10">
+                                <tr class="text-xs text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                                    <th class="p-4 font-semibold">Nama / Kontak</th>
+                                    <th class="p-4 font-semibold">Properti Minat</th>
+                                    <th class="p-4 font-semibold">Status</th>
+                                    <th class="p-4 font-semibold">Sumber</th>
+                                    <th class="p-4 font-semibold">Tgl Follow Up</th>
+                                    <th class="p-4 font-semibold text-right">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leads-table-body" class="text-sm divide-y divide-gray-100">
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-kanban" class="tab-content hidden h-full flex flex-col">
+                <h1 class="text-2xl font-bold text-gray-800 mb-6 shrink-0">Kanban Board Pipeline</h1>
+                <div class="flex-1 overflow-x-auto overflow-y-hidden">
+                    <div class="flex gap-4 h-full pb-4" id="kanban-board">
+                        <!-- Kanban columns injected via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-calculator" class="tab-content hidden">
+                <h1 class="text-2xl font-bold text-gray-800 mb-6">Kalkulator Komisi Pro</h1>
+                <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 max-w-2xl">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Harga Properti Terjual (Rp)</label>
+                                <input type="number" id="calc-price" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-primary focus:border-primary" placeholder="Misal: 1000000000" oninput="calculateCommission()">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Komisi Broker / Developer (%)</label>
+                                <input type="number" id="calc-comm" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-primary focus:border-primary" value="3" oninput="calculateCommission()">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Potongan Pajak/Lainnya (%)</label>
+                                <input type="number" id="calc-tax" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-primary focus:border-primary" value="0" oninput="calculateCommission()">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Split Komisi Pribadi (Agent) (%)</label>
+                                <input type="number" id="calc-split" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-primary focus:border-primary" value="70" oninput="calculateCommission()">
+                            </div>
+                        </div>
+                        <div class="bg-indigo-50 rounded-xl p-6 flex flex-col justify-center border border-indigo-100">
+                            <h3 class="text-sm font-bold text-indigo-800 uppercase tracking-wide mb-4">Estimasi Pendapatan</h3>
+                            
+                            <div class="space-y-3 mb-6">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Total Komisi Kotor:</span>
+                                    <span class="font-semibold text-gray-800" id="res-gross">Rp 0</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Setelah Pajak:</span>
+                                    <span class="font-semibold text-gray-800" id="res-net">Rp 0</span>
+                                </div>
+                            </div>
+                            
+                            <div class="pt-4 border-t border-indigo-200">
+                                <span class="block text-xs font-medium text-indigo-600 mb-1">Take Home Pay (Hak Anda):</span>
+                                <span class="block text-3xl font-bold text-primary" id="res-final">Rp 0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <div id="lead-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center hidden backdrop-blur-sm p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg mx-auto my-8 p-6 relative">
+            <button onclick="closeLeadModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <h2 id="lead-modal-title" class="text-xl font-bold text-gray-800 mb-6">Tambah Lead Baru</h2>
+            
+            <form id="lead-form" class="space-y-4">
+                <input type="hidden" id="lead-id">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2 sm:col-span-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                        <input type="text" id="lead-name" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary" required>
+                    </div>
+                    <div class="col-span-2 sm:col-span-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">No. WhatsApp/HP</label>
+                        <input type="text" id="lead-phone" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Properti Diminati</label>
+                    <input type="text" id="lead-property" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary" placeholder="Misal: Cluster Anggrek Tipe 45" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Potensi Nilai (Rp)</label>
+                        <input type="number" id="lead-value" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary" placeholder="0">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Tanggal Follow Up</label>
+                        <input type="date" id="lead-date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary" required>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Status Pipeline</label>
+                        <select id="lead-status" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+                            <option value="New">New Lead</option>
+                            <option value="Contacted">Contacted</option>
+                            <option value="Viewing">Viewing/Survey</option>
+                            <option value="Negotiation">Negotiation</option>
+                            <option value="Won">Won (Closing)</option>
+                            <option value="Lost">Lost</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Sumber (Ad Stats)</label>
+                        <select id="lead-source" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-primary focus:border-primary">
+                            <option value="Facebook Ads">Facebook Ads</option>
+                            <option value="Instagram Ads">Instagram Ads</option>
+                            <option value="Google Ads">Google Ads</option>
+                            <option value="Referral">Referral</option>
+                            <option value="Organic/Other">Organic/Other</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="pt-4 flex justify-end gap-3">
+                    <button type="button" onclick="closeLeadModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">Batal</button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-indigo-700 rounded-lg shadow-sm">Simpan Lead</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Environment variables setup
+        const appId = 'property-tracker-pro';
+        const firebaseConfig = {
+            apiKey: "AIzaSyCOk3usznqDpgvB60D--8vVYyK3qpH-iEo",
+            authDomain: "lead-tracker-pro-af03a.firebaseapp.com",
+            projectId: "lead-tracker-pro-af03a",
+            storageBucket: "lead-tracker-pro-af03a.firebasestorage.app",
+            messagingSenderId: "302779008130",
+            appId: "1:302779008130:web:adf4afb9a6c656613fa09b",
+            measurementId: "G-Z57E0SY8WL"
+        };
+        
+        let app, db, auth;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+        } catch (e) {
+            console.error("Firebase init error:", e);
+            showToast("Gagal menghubungkan ke database", "error");
+        }
+
+        // Global State
+        const state = {
+            user: null,
+            role: null, // 'admin' or 'agent'
+            profile: null,
+            leads: [],
+            kanbanStatuses: ['New', 'Contacted', 'Viewing', 'Negotiation', 'Won', 'Lost'],
+            chartInstance: null
+        };
+
+        // DOM Elements
+        const viewAuth = document.getElementById('auth-view');
+        const viewWaiting = document.getElementById('waiting-view');
+        const viewAdmin = document.getElementById('admin-view');
+        const viewAgent = document.getElementById('agent-view');
+        const formLogin = document.getElementById('login-form');
+        const formRegister = document.getElementById('register-form');
+        
+        window.showToast = function(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+            const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-circle-xmark' : 'fa-info-circle';
+            
+            toast.className = `${bgColor} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 transform transition-all translate-x-full opacity-0 duration-300`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span class="text-sm font-medium">${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        window.formatRupiah = (number) => {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+        }
+
+        window.copyToClipboard = (text) => {
+            const temp = document.createElement('textarea');
+            temp.value = text;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showToast('Nomor rekening disalin!', 'info');
+        }
+
+        window.toggleAuthView = () => {
+            formLogin.classList.toggle('hidden');
+            formRegister.classList.toggle('hidden');
+        }
+
+        function switchMainView(viewName) {
+            viewAuth.classList.add('hidden');
+            viewWaiting.classList.add('hidden');
+            viewAdmin.classList.add('hidden');
+            viewAgent.classList.add('hidden');
+
+            if(viewName === 'auth') viewAuth.classList.remove('hidden');
+            else if(viewName === 'waiting') viewWaiting.classList.remove('hidden');
+            else if(viewName === 'admin') viewAdmin.classList.remove('hidden');
+            else if(viewName === 'agent') viewAgent.classList.remove('hidden');
+        }
+
+        window.switchTab = (tabId) => {
+            // Update nav styles
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('bg-indigo-50', 'text-primary');
+                el.classList.add('text-gray-600', 'hover:bg-gray-50');
+            });
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if(activeNav) {
+                activeNav.classList.remove('text-gray-600', 'hover:bg-gray-50');
+                activeNav.classList.add('bg-indigo-50', 'text-primary');
+            }
+
+            // Update content visibility
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('block', 'flex');
+            });
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            if(activeTab) {
+                if(tabId === 'kanban' || tabId === 'database') activeTab.classList.add('flex');
+                else activeTab.classList.add('block');
+                activeTab.classList.remove('hidden');
+            }
+
+            if(tabId === 'kanban') renderKanban();
+            if(tabId === 'dashboard') updateDashboardCharts();
+        }
+
+        // Listen for auth state
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                state.user = user;
+                
+                // Check if admin bypass (anonymous login with specific hardcoded path handled below)
+                if (user.isAnonymous && state.role === 'admin') {
+                    switchMainView('admin');
+                    fetchUsersForAdmin();
+                    return;
+                }
+
+                // Normal user: fetch profile to check approval status
+                try {
+                    const profileRef = doc(db, 'artifacts', appId, 'public', 'data', 'userProfiles', user.uid);
+                    const profileSnap = await getDoc(profileRef);
+                    
+                    if (profileSnap.exists()) {
+                        state.profile = profileSnap.data();
+                        
+                        if (state.profile.status === 'approved') {
+                            state.role = 'agent';
+                            document.getElementById('user-display-name').innerText = state.profile.name || 'Agent';
+                            document.getElementById('user-display-email').innerText = state.profile.email;
+                            document.getElementById('user-avatar').innerText = (state.profile.name || 'A').charAt(0).toUpperCase();
+                            switchMainView('agent');
+                            startLeadsListener(); // load data
+                        } else {
+                            switchMainView('waiting');
+                        }
+                    } else {
+                        // Profile missing, maybe deleted
+                        handleLogout();
+                    }
+                } catch (e) {
+                    console.error("Error fetching profile", e);
+                }
+            } else {
+                state.user = null;
+                state.role = null;
+                state.profile = null;
+                switchMainView('auth');
+            }
+        });
+
+        // Login Logic
+        formLogin.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+
+            // Admin Hardcoded Check as per prompt
+            if (email === 'Admin!' && pass === '@Properti#Real#1!') {
+                try {
+                    await signInAnonymously(auth);
+                    state.role = 'admin';
+                    // The onAuthStateChanged will handle the redirect
+                    showToast('Login Admin Berhasil');
+                } catch (e) {
+                    showToast('Gagal login admin: ' + e.message, 'error');
+                }
+                return;
+            }
+
+            // Normal User Login
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+                showToast('Login Berhasil');
+            } catch (e) {
+                showToast('Login gagal. Periksa kembali kredensial Anda.', 'error');
+            }
+        });
+
+        // Register Logic
+        formRegister.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value;
+            const email = document.getElementById('reg-email').value;
+            const pass = document.getElementById('reg-password').value;
+
+            try {
+                // Create auth user
+                const userCred = await createUserWithEmailAndPassword(auth, email, pass);
+                const uid = userCred.user.uid;
+
+                // Create profile doc in public data area so admin can read it
+                // RULE 1: /artifacts/{appId}/public/data/userProfiles
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'userProfiles', uid), {
+                    uid: uid,
+                    name: name,
+                    email: email,
+                    status: 'pending', // Requires admin approval
+                    createdAt: new Date().toISOString()
+                });
+
+                // Generate random 3 digit code for payment
+                const uniqueCode = Math.floor(100 + Math.random() * 900);
+                document.getElementById('unique-code').innerText = uniqueCode;
+                document.getElementById('payment-modal').classList.remove('hidden');
+                document.getElementById('payment-modal').classList.add('flex');
+
+                showToast('Pendaftaran berhasil!');
+            } catch (e) {
+                showToast('Pendaftaran gagal: ' + e.message, 'error');
+            }
+        });
+
+        window.closePaymentModal = () => {
+            document.getElementById('payment-modal').classList.add('hidden');
+            document.getElementById('payment-modal').classList.remove('flex');
+            // User is already signed in by Firebase, the listener will push them to waiting view
+        }
+
+        window.handleLogout = async () => {
+            try {
+                await signOut(auth);
+                showToast('Berhasil keluar');
+            } catch (e) {
+                showToast('Gagal keluar', 'error');
+            }
+        }
+
+        window.fetchUsersForAdmin = async () => {
+            if (!state.user || state.role !== 'admin') return;
+            
+            try {
+                const profilesRef = collection(db, 'artifacts', appId, 'public', 'data', 'userProfiles');
+                // RULE 2: No complex queries, get all, process locally
+                const snapshot = await getDocs(profilesRef);
+                const listEl = document.getElementById('admin-users-list');
+                listEl.innerHTML = '';
+                
+                let users = [];
+                snapshot.forEach(doc => users.push(doc.data()));
+                
+                // Sort locally (newest first)
+                users.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+                if (users.length === 0) {
+                    listEl.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">Tidak ada pendaftar.</td></tr>`;
+                    return;
+                }
+
+                users.forEach(u => {
+                    const d = new Date(u.createdAt).toLocaleDateString('id-ID');
+                    const isApproved = u.status === 'approved';
+                    const statusBadge = isApproved 
+                        ? `<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-semibold">Approved</span>`
+                        : `<span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-semibold">Pending</span>`;
+                    
+                    const btn = isApproved 
+                        ? `<button onclick="toggleUserStatus('${u.uid}', 'pending')" class="text-xs border border-gray-300 px-3 py-1 rounded hover:bg-gray-100">Batalkan</button>`
+                        : `<button onclick="toggleUserStatus('${u.uid}', 'approved')" class="text-xs bg-primary text-white px-3 py-1 rounded shadow-sm hover:bg-indigo-700">Approve</button>`;
+
+                    const tr = document.createElement('tr');
+                    tr.className = "border-b border-gray-100 hover:bg-gray-50";
+                    tr.innerHTML = `
+                        <td class="p-4">${u.name}</td>
+                        <td class="p-4">${u.email}</td>
+                        <td class="p-4">${d}</td>
+                        <td class="p-4">${statusBadge}</td>
+                        <td class="p-4">${btn}</td>
+                    `;
+                    listEl.appendChild(tr);
+                });
+
+            } catch (e) {
+                console.error("Error fetching users:", e);
+                showToast("Gagal memuat data user", "error");
+            }
+        }
+
+        window.toggleUserStatus = async (uid, newStatus) => {
+            if (!state.user || state.role !== 'admin') return;
+            try {
+                const ref = doc(db, 'artifacts', appId, 'public', 'data', 'userProfiles', uid);
+                await updateDoc(ref, { status: newStatus });
+                showToast(`Status user diubah menjadi ${newStatus}`);
+                fetchUsersForAdmin(); // Refresh list
+            } catch (e) {
+                showToast('Gagal merubah status', 'error');
+            }
+        }
+
+        let unsubLeads = null;
+        function startLeadsListener() {
+            if (!state.user || state.role !== 'agent') return;
+            
+            // RULE 1: /artifacts/{appId}/users/{userId}/leads
+            const leadsRef = collection(db, 'artifacts', appId, 'users', state.user.uid, 'leads');
+            
+            if (unsubLeads) unsubLeads();
+            
+            unsubLeads = onSnapshot(leadsRef, (snapshot) => {
+                state.leads = [];
+                snapshot.forEach(doc => {
+                    state.leads.push({ id: doc.id, ...doc.data() });
+                });
+                
+                // Sort locally by nextFollowUp ascending
+                state.leads.sort((a,b) => new Date(a.nextFollowUp) - new Date(b.nextFollowUp));
+                
+                renderDashboard();
+            }, (error) => {
+                console.error("Error fetching leads:", error);
+                showToast("Gagal memuat database leads", "error");
+            });
+        }
+
+        function renderDashboard() {
+            renderLeadsTable();
+            renderKanban();
+            updateDashboardCharts();
+            updateReminders();
+        }
+
+        function renderLeadsTable() {
+            const tbody = document.getElementById('leads-table-body');
+            tbody.innerHTML = '';
+            
+            if (state.leads.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500">Belum ada data lead. Klik "Tambah Lead" untuk memulai.</td></tr>`;
+                return;
+            }
+
+            state.leads.forEach(lead => {
+                const statusColors = {
+                    'New': 'bg-blue-100 text-blue-700',
+                    'Contacted': 'bg-purple-100 text-purple-700',
+                    'Viewing': 'bg-orange-100 text-orange-700',
+                    'Negotiation': 'bg-yellow-100 text-yellow-700',
+                    'Won': 'bg-green-100 text-green-700',
+                    'Lost': 'bg-red-100 text-red-700',
+                };
+                const color = statusColors[lead.status] || 'bg-gray-100 text-gray-700';
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="p-4">
+                        <div class="font-medium text-gray-800">${lead.name}</div>
+                        <div class="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                            <i class="fa-brands fa-whatsapp text-green-500"></i> ${lead.phone}
+                        </div>
+                    </td>
+                    <td class="p-4 text-gray-700">${lead.property}</td>
+                    <td class="p-4">
+                        <span class="px-2 py-1 rounded text-xs font-semibold ${color}">${lead.status}</span>
+                    </td>
+                    <td class="p-4 text-gray-600 text-xs">${lead.source}</td>
+                    <td class="p-4 text-gray-700 text-sm"><i class="fa-regular fa-calendar text-gray-400 mr-1"></i> ${lead.nextFollowUp}</td>
+                    <td class="p-4 text-right">
+                        <button onclick="editLead('${lead.id}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 p-2 rounded-lg mr-1" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="deleteLead('${lead.id}')" class="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded-lg" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.renderKanban = () => {
+            const board = document.getElementById('kanban-board');
+            board.innerHTML = '';
+            
+            const cols = {
+                'New': { title: 'New Lead', icon: 'fa-star', color: 'text-blue-500', bg: 'bg-blue-50', border: 'border-blue-200' },
+                'Contacted': { title: 'Contacted', icon: 'fa-phone', color: 'text-purple-500', bg: 'bg-purple-50', border: 'border-purple-200' },
+                'Viewing': { title: 'Viewing/Survey', icon: 'fa-eye', color: 'text-orange-500', bg: 'bg-orange-50', border: 'border-orange-200' },
+                'Negotiation': { title: 'Negotiation', icon: 'fa-handshake', color: 'text-yellow-500', bg: 'bg-yellow-50', border: 'border-yellow-200' },
+                'Won': { title: 'Won', icon: 'fa-trophy', color: 'text-green-500', bg: 'bg-green-50', border: 'border-green-200' },
+                'Lost': { title: 'Lost', icon: 'fa-xmark', color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-200' }
+            };
+
+            state.kanbanStatuses.forEach(status => {
+                const conf = cols[status];
+                const leadsInCol = state.leads.filter(l => l.status === status);
+                
+                const colEl = document.createElement('div');
+                colEl.className = `flex-1 min-w-[280px] flex flex-col bg-gray-50 rounded-xl border border-gray-200 overflow-hidden`;
+                
+                colEl.innerHTML = `
+                    <div class="p-3 border-b border-gray-200 bg-white flex justify-between items-center shrink-0">
+                        <h3 class="font-semibold text-sm text-gray-800 flex items-center gap-2">
+                            <i class="fa-solid ${conf.icon} ${conf.color}"></i> ${conf.title}
+                        </h3>
+                        <span class="bg-gray-100 text-gray-600 text-xs py-0.5 px-2 rounded-full font-bold">${leadsInCol.length}</span>
+                    </div>
+                    <div class="flex-1 p-3 overflow-y-auto kanban-dropzone kanban-col space-y-3" data-status="${status}" ondrop="drop(event)" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+                        ${leadsInCol.map(lead => `
+                            <div class="bg-white p-3 rounded-lg border ${conf.border} shadow-sm cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow" draggable="true" ondragstart="drag(event)" id="card-${lead.id}" data-id="${lead.id}">
+                                <div class="flex justify-between items-start mb-2">
+                                    <h4 class="font-semibold text-sm text-gray-800 truncate" title="${lead.name}">${lead.name}</h4>
+                                    <div class="dropdown inline-block relative ml-2">
+                                        <button class="text-gray-400 hover:text-gray-600 px-1" onclick="document.getElementById('drop-${lead.id}').classList.toggle('hidden')">
+                                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                                        </button>
+                                        <ul id="drop-${lead.id}" class="hidden absolute right-0 w-32 bg-white border border-gray-200 rounded-lg shadow-lg z-10 py-1 text-xs">
+                                            ${state.kanbanStatuses.map(s => `
+                                                <li><a class="block px-4 py-2 text-gray-700 hover:bg-indigo-50 hover:text-primary cursor-pointer" onclick="updateLeadStatus('${lead.id}', '${s}')">Move to ${s}</a></li>
+                                            `).join('')}
+                                        </ul>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-500 mb-2 truncate"><i class="fa-solid fa-building mr-1"></i> ${lead.property}</p>
+                                <div class="flex justify-between items-center text-xs pt-2 border-t border-gray-100 mt-2">
+                                    <span class="text-gray-500"><i class="fa-solid fa-calendar mr-1"></i> ${lead.nextFollowUp.substring(5)}</span>
+                                    <span class="font-bold text-gray-700">${formatRupiah(lead.value || 0)}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                board.appendChild(colEl);
+            });
+
+            // Close dropdowns on outside click
+            document.onclick = function(e) {
+                if(!e.target.closest('.dropdown')) {
+                    document.querySelectorAll('.dropdown ul').forEach(el => el.classList.add('hidden'));
+                }
+            }
+        }
+
+        function updateDashboardCharts() {
+            // Stats updates
+            document.getElementById('stat-total-leads').innerText = state.leads.length;
+            const activeLeads = state.leads.filter(l => l.status !== 'Won' && l.status !== 'Lost').length;
+            document.getElementById('stat-active-leads').innerText = activeLeads;
+            
+            const wonValue = state.leads.filter(l => l.status === 'Won').reduce((sum, l) => sum + Number(l.value || 0), 0);
+            document.getElementById('stat-won-value').innerText = formatRupiah(wonValue);
+
+            // Chart update
+            const ctx = document.getElementById('sourceChart');
+            if(state.chartInstance) state.chartInstance.destroy();
+
+            const sourceCounts = {};
+            state.leads.forEach(l => {
+                sourceCounts[l.source] = (sourceCounts[l.source] || 0) + 1;
+            });
+
+            if(Object.keys(sourceCounts).length === 0) return; // Wait for data
+
+            state.chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(sourceCounts),
+                    datasets: [{
+                        data: Object.values(sourceCounts),
+                        backgroundColor: ['#4f46e5', '#10b981', '#f59e0b', '#ec4899', '#6b7280'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { boxWidth: 12, font: {family: 'Inter', size: 12} } }
+                    },
+                    cutout: '70%'
+                }
+            });
+        }
+
+        function updateReminders() {
+            const list = document.getElementById('reminder-list');
+            list.innerHTML = '';
+
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Filter active leads needing follow up <= today
+            const toFollowUp = state.leads.filter(l => 
+                l.status !== 'Won' && 
+                l.status !== 'Lost' && 
+                l.nextFollowUp && 
+                l.nextFollowUp <= today
+            );
+
+            if (toFollowUp.length === 0) {
+                list.innerHTML = `<li class="text-sm text-gray-500 text-center py-4">Hore! Semua follow up sudah selesai.</li>`;
+                return;
+            }
+
+            toFollowUp.forEach(lead => {
+                const isOverdue = lead.nextFollowUp < today;
+                list.innerHTML += `
+                    <li class="bg-white border ${isOverdue ? 'border-red-200 bg-red-50' : 'border-yellow-200 bg-yellow-50'} rounded-xl p-3 flex justify-between items-center shadow-sm">
+                        <div class="overflow-hidden pr-2">
+                            <p class="font-semibold text-sm text-gray-800 truncate">${lead.name}</p>
+                            <p class="text-xs text-gray-500 truncate mt-0.5">${lead.property}</p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-xs font-bold ${isOverdue ? 'text-red-600' : 'text-yellow-600'}">${isOverdue ? 'Terlewat' : 'Hari Ini'}</span>
+                            <a href="https://wa.me/${lead.phone.replace(/[^0-9]/g, '')}" target="_blank" class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600 transition-colors shadow-sm" title="WhatsApp">
+                                <i class="fa-brands fa-whatsapp"></i>
+                            </a>
+                        </div>
+                    </li>
+                `;
+            });
+        }
+
+        window.drag = (ev) => {
+            ev.dataTransfer.setData("text/plain", ev.target.dataset.id);
+            ev.target.classList.add('dragging');
+        }
+        window.allowDrop = (ev) => {
+            ev.preventDefault();
+            const dropzone = ev.target.closest('.kanban-dropzone');
+            if(dropzone) dropzone.classList.add('drag-over');
+        }
+        window.dragLeave = (ev) => {
+            const dropzone = ev.target.closest('.kanban-dropzone');
+            if(dropzone) dropzone.classList.remove('drag-over');
+        }
+        window.drop = (ev) => {
+            ev.preventDefault();
+            document.querySelectorAll('.kanban-dropzone').forEach(el => el.classList.remove('drag-over'));
+            document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+            
+            const dropzone = ev.target.closest('.kanban-dropzone');
+            if (!dropzone) return;
+            
+            const leadId = ev.dataTransfer.getData("text/plain");
+            const newStatus = dropzone.dataset.status;
+            
+            if (leadId && newStatus) {
+                updateLeadStatus(leadId, newStatus);
+            }
+        }
+
+
+        window.openLeadModal = () => {
+            document.getElementById('lead-form').reset();
+            document.getElementById('lead-id').value = '';
+            document.getElementById('lead-modal-title').innerText = 'Tambah Lead Baru';
+            // Default date to today
+            document.getElementById('lead-date').value = new Date().toISOString().split('T')[0];
+            
+            document.getElementById('lead-modal').classList.remove('hidden');
+            document.getElementById('lead-modal').classList.add('flex');
+        }
+
+        window.closeLeadModal = () => {
+            document.getElementById('lead-modal').classList.add('hidden');
+            document.getElementById('lead-modal').classList.remove('flex');
+        }
+
+        document.getElementById('lead-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(!state.user || state.role !== 'agent') return;
+
+            const id = document.getElementById('lead-id').value;
+            const data = {
+                name: document.getElementById('lead-name').value,
+                phone: document.getElementById('lead-phone').value,
+                property: document.getElementById('lead-property').value,
+                value: Number(document.getElementById('lead-value').value) || 0,
+                nextFollowUp: document.getElementById('lead-date').value,
+                status: document.getElementById('lead-status').value,
+                source: document.getElementById('lead-source').value,
+                updatedAt: new Date().toISOString()
+            };
+
+            try {
+                const leadsCol = collection(db, 'artifacts', appId, 'users', state.user.uid, 'leads');
+                if (id) {
+                    await updateDoc(doc(leadsCol, id), data);
+                    showToast('Lead berhasil diupdate');
+                } else {
+                    data.createdAt = new Date().toISOString();
+                    await setDoc(doc(leadsCol, crypto.randomUUID()), data);
+                    showToast('Lead baru ditambahkan');
+                }
+                closeLeadModal();
+            } catch(e) {
+                console.error(e);
+                showToast('Gagal menyimpan data', 'error');
+            }
+        });
+
+        window.editLead = (id) => {
+            const lead = state.leads.find(l => l.id === id);
+            if(!lead) return;
+
+            document.getElementById('lead-id').value = lead.id;
+            document.getElementById('lead-name').value = lead.name;
+            document.getElementById('lead-phone').value = lead.phone;
+            document.getElementById('lead-property').value = lead.property;
+            document.getElementById('lead-value').value = lead.value;
+            document.getElementById('lead-date').value = lead.nextFollowUp;
+            document.getElementById('lead-status').value = lead.status;
+            document.getElementById('lead-source').value = lead.source || 'Organic/Other';
+            
+            document.getElementById('lead-modal-title').innerText = 'Edit Lead';
+            document.getElementById('lead-modal').classList.remove('hidden');
+            document.getElementById('lead-modal').classList.add('flex');
+        }
+
+        window.deleteLead = async (id) => {
+            if(!state.user || state.role !== 'agent') return;
+            // Using custom confirm via toast or direct execution (No native confirm allowed)
+            // Ideally we'd use a modal, but for brevity we'll just execute it and show toast
+            try {
+                await deleteDoc(doc(db, 'artifacts', appId, 'users', state.user.uid, 'leads', id));
+                showToast('Lead dihapus', 'info');
+            } catch(e) {
+                showToast('Gagal menghapus lead', 'error');
+            }
+        }
+
+        window.updateLeadStatus = async (id, newStatus) => {
+            if(!state.user || state.role !== 'agent') return;
+            try {
+                await updateDoc(doc(db, 'artifacts', appId, 'users', state.user.uid, 'leads', id), {
+                    status: newStatus,
+                    updatedAt: new Date().toISOString()
+                });
+                showToast(`Status dipindah ke ${newStatus}`);
+            } catch(e) {
+                showToast('Gagal memindah status', 'error');
+            }
+        }
+
+        window.calculateCommission = () => {
+            const price = Number(document.getElementById('calc-price').value) || 0;
+            const commPercent = Number(document.getElementById('calc-comm').value) || 0;
+            const taxPercent = Number(document.getElementById('calc-tax').value) || 0;
+            const splitPercent = Number(document.getElementById('calc-split').value) || 0;
+
+            const gross = price * (commPercent / 100);
+            const net = gross - (gross * (taxPercent / 100));
+            const finalAgent = net * (splitPercent / 100);
+
+            document.getElementById('res-gross').innerText = formatRupiah(gross);
+            document.getElementById('res-net').innerText = formatRupiah(net);
+            document.getElementById('res-final').innerText = formatRupiah(finalAgent);
+        }
+
+        // Initialize display
+        switchMainView('auth');
+    </script>
+</body>
+</html>
