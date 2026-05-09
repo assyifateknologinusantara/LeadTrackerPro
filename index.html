@@ -69,7 +69,8 @@
         <div class="absolute inset-0 login-overlay"></div>
         
         <!-- Login Form -->
-        <div id="login-form" class="glass-panel relative w-[calc(100%-2rem)] max-w-md p-6 sm:p-8 rounded-2xl z-10 transition-all duration-300">
+        <!-- Diperbaiki: Menghapus transisi rumit agar tidak stuck di layar HP -->
+        <div id="login-form" class="glass-panel relative w-[calc(100%-2rem)] max-w-md p-6 sm:p-8 rounded-2xl z-10 block">
             <div class="text-center mb-8">
                 <div class="bg-indigo-100 text-indigo-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                     <i class="fa-solid fa-building-user text-2xl"></i>
@@ -111,7 +112,8 @@
         </div>
 
         <!-- Register Form -->
-        <div id="register-form" class="glass-panel relative w-[calc(100%-2rem)] max-w-md p-6 sm:p-8 rounded-2xl z-10 hidden transition-all duration-300">
+        <!-- Diperbaiki: Dibuat simple agar toggle display aman -->
+        <div id="register-form" class="glass-panel relative w-[calc(100%-2rem)] max-w-md p-6 sm:p-8 rounded-2xl z-10 hidden">
             <div class="text-center mb-6">
                 <h2 class="text-2xl font-bold text-gray-900">Pendaftaran Agen</h2>
                 <p class="text-sm text-gray-500 mt-1">Bergabunglah untuk akses Lead Tracker Pro</p>
@@ -148,7 +150,7 @@
 
     <!-- Upgrade Premium Modal -->
     <div id="upgrade-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-60 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl w-[calc(100%-2rem)] max-w-md p-6 shadow-2xl transform transition-all scale-100 opacity-100">
+        <div class="bg-white rounded-2xl w-[calc(100%-2rem)] max-w-md p-6 shadow-2xl">
             <div class="text-center mb-6">
                 <div class="bg-purple-100 text-purple-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                     <i class="fa-solid fa-crown text-2xl"></i>
@@ -292,7 +294,7 @@
             </aside>
 
             <!-- Content Wrapper -->
-            <main class="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-6 w-full">
+            <main class="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-6 w-full relative">
                 
                 <!-- Trial Banner Info -->
                 <div id="trial-banner" class="hidden bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-6 flex flex-col sm:flex-row justify-between items-center shadow-sm gap-3">
@@ -775,17 +777,16 @@
 
         const ui = {
             auth: document.getElementById('auth-view'), loginForm: document.getElementById('login-form'), regForm: document.getElementById('register-form'),
-            paymentModal: document.getElementById('payment-modal'), upgradeModal: document.getElementById('upgrade-modal'), pendingView: document.getElementById('pending-view'),
+            upgradeModal: document.getElementById('upgrade-modal'), pendingView: document.getElementById('pending-view'),
             app: document.getElementById('app-view'), adminMenus: document.getElementById('nav-admin-menus'), quickAdd: document.getElementById('quick-add-container'),
             trialBanner: document.getElementById('trial-banner'), trialText: document.getElementById('trial-text')
         };
 
         function switchMainView(viewType) {
-            ui.auth.classList.add('hidden'); ui.paymentModal.classList.add('hidden'); ui.upgradeModal.classList.add('hidden');
+            ui.auth.classList.add('hidden'); ui.upgradeModal.classList.add('hidden');
             ui.pendingView.classList.add('hidden'); ui.app.classList.add('hidden'); ui.trialBanner.classList.add('hidden');
 
             if (viewType === 'login') { ui.auth.classList.remove('hidden'); ui.loginForm.classList.remove('hidden'); ui.regForm.classList.add('hidden'); } 
-            else if (viewType === 'payment') ui.paymentModal.classList.remove('hidden');
             else if (viewType === 'upgrade') ui.upgradeModal.classList.remove('hidden');
             else if (viewType === 'pending') ui.pendingView.classList.remove('hidden');
             else if (viewType === 'app') {
@@ -801,9 +802,18 @@
             }
         }
 
-        // Toggle form login/register diperbaiki (hapus efek scale/opacity yg bikin stuck)
-        document.getElementById('show-register').addEventListener('click', () => { ui.loginForm.classList.add('hidden'); ui.regForm.classList.remove('hidden'); });
-        document.getElementById('show-login').addEventListener('click', () => { ui.regForm.classList.add('hidden'); ui.loginForm.classList.remove('hidden'); });
+        // PERBAIKAN: Toggle Login / Register disederhanakan tanpa animasi stuck
+        document.getElementById('show-register').addEventListener('click', (e) => {
+            e.preventDefault();
+            ui.loginForm.classList.add('hidden');
+            ui.regForm.classList.remove('hidden');
+        });
+
+        document.getElementById('show-login').addEventListener('click', (e) => {
+            e.preventDefault();
+            ui.regForm.classList.add('hidden');
+            ui.loginForm.classList.remove('hidden');
+        });
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -849,7 +859,7 @@
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...'; btn.disabled = true;
             
             try {
-                // 1. Jalankan API FormSubmit TERLEBIH DAHULU, tanpa menunggu response sukses penuh (no-cors)
+                // PERBAIKAN: FormSubmit tanpa memblokir proses auth di Firebase
                 fetch("https://formsubmit.co/ajax/assyifateknologinusantara@gmail.com", {
                     method: "POST",
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -861,13 +871,13 @@
                     })
                 }).catch(err => console.log("FormSubmit API Triggered")); // Catch error agar tidak memblokir pendaftaran
 
-                // 2. Lanjutkan pembuatan user di Firebase
+                // Firebase Auth
                 const userCred = await createUserWithEmailAndPassword(auth, email, password);
                 const trialEnd = new Date(); trialEnd.setDate(trialEnd.getDate() + 7);
                 await setDoc(doc(db, 'artifacts', APP_ID, 'system', 'users', 'profiles', userCred.user.uid), {
                     name: name, email: email, status: 'trial', createdAt: new Date().toISOString(), trialEndsAt: trialEnd.toISOString()
                 });
-                // Selesai. Auth listener akan me-redirect ke App View
+                // State listener otomatis mendeteksi dan masuk ke dashboard
             } catch (error) {
                 showToast(error.code === 'auth/email-already-in-use' ? "Email sudah terdaftar." : "Pendaftaran gagal.", "error");
                 btn.innerHTML = 'Daftar Sekarang'; btn.disabled = false;
@@ -876,6 +886,7 @@
 
         document.getElementById('form-login').addEventListener('submit', async (e) => {
             e.preventDefault();
+            // PERBAIKAN: Hapus spasi dan jadikan huruf kecil khusus untuk bypass Admin
             const emailStr = document.getElementById('login-email').value.trim();
             const passStr = document.getElementById('login-password').value.trim();
             const btn = e.target.querySelector('button');
@@ -900,7 +911,6 @@
 
         window.confirmUpgradeWA = () => window.open(`https://wa.me/6285129462992?text=${encodeURIComponent(`Halo Admin, konfirmasi pembayaran Upgrade Premium Lead Tracker Pro.\nEmail Akun: ${state.user ? state.user.email : ''}\n[Lampirkan Bukti Transfer Anda di sini]`)}`, '_blank');
         window.showUpgradeModalManual = () => { document.getElementById('upgrade-amount').textContent = new Intl.NumberFormat('id-ID').format(549000 + Math.floor(Math.random() * 900) + 100); switchMainView('upgrade'); };
-        document.getElementById('btn-close-payment').addEventListener('click', () => switchMainView('pending'));
 
         window.switchTab = (tabId) => {
             document.querySelectorAll('.view-panel').forEach(el => el.classList.add('hidden'));
