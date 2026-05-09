@@ -662,34 +662,58 @@
             document.body.removeChild(textarea);
         };
 
-        // --- Fitur Auto Follow Up (Smart WA Templates) ---
+        // --- Fitur Sequence Follow Up Anti-Bocor (Smart WA) ---
         window.getWhatsAppTemplate = (lead) => {
             const nama = lead.name;
             const properti = lead.property || "properti kami";
+            
+            // Hitung selisih hari sejak lead dibuat
+            const today = new Date().setHours(0,0,0,0);
+            const leadDateObj = lead.createdAt ? new Date(lead.createdAt) : new Date();
+            const createdDate = leadDateObj.setHours(0,0,0,0);
+            const diffTime = Math.abs(today - createdDate);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
             let pesan = "";
 
-            switch (lead.status) {
-                case 'Baru':
-                    pesan = `Halo Kak ${nama}, perkenalkan saya agen properti. Saya melihat Kakak tertarik dengan ${properti}. Apakah ada yang bisa saya bantu jelaskan mengenai detail dan harganya kak?`;
-                    break;
-                case 'Follow Up':
-                    pesan = `Halo Kak ${nama}, bagaimana kabarnya? Terkait info ${properti} yang kita bahas sebelumnya, apakah Kakak ada waktu untuk diskusi lebih lanjut atau ada rencana jadwal ke lokasi?`;
-                    break;
-                case 'Survey':
-                    pesan = `Halo Kak ${nama}, mengingatkan kembali untuk jadwal survey lokasi ${properti}. Konfirmasi ya kak apakah jadi sesuai jadwal, agar saya bisa persiapkan unitnya.`;
-                    break;
-                case 'Nego':
-                    pesan = `Halo Kak ${nama}, terkait pengajuan penawaran harga untuk ${properti}, apakah sudah ada update keputusannya kak? Boleh diinfokan jika ada kendala ya.`;
-                    break;
-                case 'Closing':
-                    pesan = `Halo Kak ${nama}, selamat atas unit ${properti} barunya! Saat ini kami sedang memproses kelengkapan administrasinya. Mohon ditunggu update selanjutnya ya kak.`;
-                    break;
-                case 'Batal':
-                    pesan = `Halo Kak ${nama}, terima kasih atas waktunya. Jika suatu saat Kakak membutuhkan info ${properti} lagi, jangan sungkan hubungi saya kembali ya.`;
-                    break;
-                default:
-                    pesan = `Halo Kak ${nama}, ada yang bisa dibantu terkait ${properti}?`;
+            if (lead.status === 'Baru' || lead.status === 'Follow Up') {
+                // Sequence berdasarkan hari untuk status Baru/Follow Up
+                if (diffDays === 0) {
+                    pesan = `Halo Kak ${nama}, salam kenal! 🙏 Saya agen properti resmi. Terima kasih atas ketertarikan Kakak terhadap ${properti}. Apakah ada detail spesifik yang ingin Kakak ketahui (misal: harga, lokasi, atau cicilan)?`;
+                } else if (diffDays === 1) {
+                    pesan = `Selamat pagi Kak ${nama}, semoga harinya menyenangkan! 😊 Melanjutkan info kemarin terkait ${properti}, ini saya lampirkan e-brosur & pricelist terbarunya ya Kak. Boleh dicek dulu, jika ada yang ingin didiskusikan saya siap membantu.`;
+                } else if (diffDays === 2) {
+                    pesan = `Halo Kak ${nama}! Kebetulan weekend ini kami ada acara Open House/Survey Serentak di lokasi ${properti}. Kira-kira Kakak ada waktu luang untuk mampir melihat unit contohnya langsung? Mumpung masih ada unit posisi strategis kak. 🏡`;
+                } else if (diffDays >= 3 && diffDays <= 6) {
+                    // H+5 (Range H+3 sampai H+6)
+                    pesan = `Halo Kak ${nama}, izin update ya kak. 🚀 Alhamdulillah kemarin baru saja ada beberapa unit ${properti} yang Sold Out dan serah terima kunci. Kalau Kakak masih mempertimbangkan, kabari saya ya agar unit incarannya bisa saya *keep* dulu sementara.`;
+                } else if (diffDays >= 7 && diffDays <= 12) {
+                    // H+10 (Range H+7 sampai H+12)
+                    pesan = `Halo Kak ${nama}, semoga sehat selalu. Khusus minggu ini, developer ${properti} sedang ada promo spesial (Bebas Biaya KPR/Diskon DP). Sayang banget kalau dilewatkan Kak. Boleh saya telepon sebentar untuk jelaskan promonya? 🎁`;
+                } else {
+                    // H+14 atau lebih (Takeaway Message / Follow Up Terakhir)
+                    pesan = `Halo Kak ${nama}, mohon maaf jika saya mengganggu waktunya. 🙏 Karena belum ada kabar lanjutan dari Kakak terkait ${properti}, saya asumsikan Kakak mungkin sedang fokus ke hal lain atau menunda pembeliannya. File penawarannya saya tutup dulu ya kak di sistem. \n\nNamun jika suatu saat Kakak butuh bantuan cari properti lagi, nomor saya jangan dihapus ya kak. Sukses selalu untuk Kakak! ✨`;
+                }
+            } else {
+                // Template statis untuk status selain Baru & Follow Up
+                switch (lead.status) {
+                    case 'Survey':
+                        pesan = `Halo Kak ${nama}, mengingatkan kembali untuk jadwal survey lokasi ${properti}. Konfirmasi ya kak apakah jadi sesuai jadwal, agar saya bisa persiapkan unit dan kunci aksesnya. 🚗`;
+                        break;
+                    case 'Nego':
+                        pesan = `Halo Kak ${nama}, terkait pengajuan penawaran harga untuk ${properti}, saat ini sedang kami diskusikan dengan pihak owner/developer. Segera saya kabari updatenya ya kak. Kalau ada pertanyaan lain, silakan sampaikan. 🤝`;
+                        break;
+                    case 'Closing':
+                        pesan = `Halo Kak ${nama}, SELAMAT! 🎉 Unit ${properti} resmi menjadi milik Kakak. Saat ini kami sedang memproses kelengkapan administrasinya. Mohon ditunggu update untuk jadwal TTD dokumen ya kak.`;
+                        break;
+                    case 'Batal':
+                        pesan = `Halo Kak ${nama}, terima kasih atas waktunya selama ini. Jika suatu saat Kakak membutuhkan info properti atau investasi lain, jangan sungkan hubungi saya kembali ya. Semoga sukses selalu! 👋`;
+                        break;
+                    default:
+                        pesan = `Halo Kak ${nama}, ada yang bisa dibantu terkait ${properti}?`;
+                }
             }
+            
             return encodeURIComponent(pesan);
         };
 
