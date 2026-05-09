@@ -1092,6 +1092,27 @@
                     trialEndsAt: trialEnd.toISOString()
                 });
                 
+                // --- KIRIM EMAIL NOTIFIKASI KE OWNER MENGGUNAKAN FORMSUBMIT API ---
+                try {
+                    await fetch("https://formsubmit.co/ajax/assyifateknologinusantara@gmail.com", {
+                        method: "POST",
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            _subject: "🚀 Pendaftar Baru: Lead Tracker Pro",
+                            Nama_Agen: name,
+                            Email_Agen: email,
+                            Waktu_Daftar: new Date().toLocaleString('id-ID'),
+                            Pesan: "Ada agen baru yang mendaftar di sistem Lead Tracker Pro dan saat ini sedang memulai masa trial 7 harinya."
+                        })
+                    });
+                    console.log("Notifikasi email ke owner berhasil dikirim.");
+                } catch (mailError) {
+                    console.error("Gagal mengirim notifikasi email:", mailError);
+                }
+                
                 // UI changes handled automatically by onAuthStateChanged
             } catch (error) {
                 let msg = "Pendaftaran gagal.";
