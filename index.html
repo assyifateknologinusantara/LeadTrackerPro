@@ -751,13 +751,14 @@
                 // Jika bukan anonim (Agent/User biasa):
                 try {
                     // Fetch profile to check approval status
-                    const userDoc = await getDoc(doc(db, 'artifacts', APP_ID, 'system', 'users', 'profiles', user.uid));
+                    const userDocRef = doc(db, 'artifacts', APP_ID, 'system', 'users', 'profiles', user.uid);
+                    const userDoc = await getDoc(userDocRef);
                     
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
-                        document.getElementById('user-display-name').textContent = userData.name;
+                        document.getElementById('user-display-name').textContent = userData.name || 'Agent';
                         document.getElementById('user-display-role').textContent = 'Agent Properti';
-                        document.getElementById('user-avatar').textContent = userData.name.charAt(0).toUpperCase();
+                        document.getElementById('user-avatar').textContent = (userData.name ? userData.name.charAt(0) : 'A').toUpperCase();
 
                         if (userData.status === 'approved') {
                             state.role = 'agent';
@@ -780,13 +781,32 @@
                             }
                         }
                     } else {
-                        // User exists in auth but no profile (shouldn't happen in normal flow, except maybe old test accounts)
-                        console.warn("User logged in but profile not found in Firestore.");
-                        auth.signOut();
+                        // Profil tidak ditemukan di Firestore, tapi user berhasil login (kemungkinan error saat daftar sebelumnya)
+                        console.warn("Profil tidak ditemukan, membuat ulang...");
+                        
+                        // Buat profil darurat agar muncul di admin
+                        await setDoc(userDocRef, {
+                            name: user.email.split('@')[0], // Gunakan bagian depan email sebagai nama sementara
+                            email: user.email,
+                            status: 'pending_payment',
+                            createdAt: new Date().toISOString()
+                        });
+                        
+                        // Setelah dibuat, tampilkan pembayaran
+                        const uniqueCode = Math.floor(Math.random() * 900) + 100;
+                        const total = 349000 + uniqueCode;
+                        document.getElementById('payment-amount').textContent = new Intl.NumberFormat('id-ID').format(total);
+                        switchMainView('payment');
+                        
+                        // Update status
+                        await updateDoc(userDocRef, {
+                            status: 'pending_approval'
+                        });
                     }
                 } catch (error) {
                     console.error("Error fetching user profile:", error);
                     showToast("Terjadi kesalahan memuat data", "error");
+                    auth.signOut(); // Logout jika ada error parah
                 }
             } else {
                 state.user = null;
