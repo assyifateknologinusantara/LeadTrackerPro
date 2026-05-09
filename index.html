@@ -662,6 +662,43 @@
             document.body.removeChild(textarea);
         };
 
+        // --- Fitur Auto Follow Up (Smart WA Templates) ---
+        window.getWhatsAppTemplate = (lead) => {
+            const nama = lead.name;
+            const properti = lead.property || "properti kami";
+            let pesan = "";
+
+            switch (lead.status) {
+                case 'Baru':
+                    pesan = `Halo Kak ${nama}, perkenalkan saya agen properti. Saya melihat Kakak tertarik dengan ${properti}. Apakah ada yang bisa saya bantu jelaskan mengenai detail dan harganya kak?`;
+                    break;
+                case 'Follow Up':
+                    pesan = `Halo Kak ${nama}, bagaimana kabarnya? Terkait info ${properti} yang kita bahas sebelumnya, apakah Kakak ada waktu untuk diskusi lebih lanjut atau ada rencana jadwal ke lokasi?`;
+                    break;
+                case 'Survey':
+                    pesan = `Halo Kak ${nama}, mengingatkan kembali untuk jadwal survey lokasi ${properti}. Konfirmasi ya kak apakah jadi sesuai jadwal, agar saya bisa persiapkan unitnya.`;
+                    break;
+                case 'Nego':
+                    pesan = `Halo Kak ${nama}, terkait pengajuan penawaran harga untuk ${properti}, apakah sudah ada update keputusannya kak? Boleh diinfokan jika ada kendala ya.`;
+                    break;
+                case 'Closing':
+                    pesan = `Halo Kak ${nama}, selamat atas unit ${properti} barunya! Saat ini kami sedang memproses kelengkapan administrasinya. Mohon ditunggu update selanjutnya ya kak.`;
+                    break;
+                case 'Batal':
+                    pesan = `Halo Kak ${nama}, terima kasih atas waktunya. Jika suatu saat Kakak membutuhkan info ${properti} lagi, jangan sungkan hubungi saya kembali ya.`;
+                    break;
+                default:
+                    pesan = `Halo Kak ${nama}, ada yang bisa dibantu terkait ${properti}?`;
+            }
+            return encodeURIComponent(pesan);
+        };
+
+        window.getWhatsAppLink = (lead) => {
+            const phone = lead.phone.replace(/^0/, '62');
+            const template = window.getWhatsAppTemplate(lead);
+            return `https://wa.me/${phone}?text=${template}`;
+        };
+
         // --- Authentication & Routing ---
         const ui = {
             auth: document.getElementById('auth-view'),
@@ -1072,8 +1109,8 @@
                 <p class="text-xs text-gray-500 mb-2 truncate" title="${lead.property || 'Belum ada properti'}"><i class="fa-solid fa-house mr-1"></i> ${lead.property || '-'}</p>
                 
                 <div class="flex justify-between items-center pt-2 border-t border-gray-50 mt-2">
-                    <a href="https://wa.me/${lead.phone.replace(/^0/, '62')}" target="_blank" class="text-green-600 hover:bg-green-50 p-1 rounded transition-colors text-xs flex items-center gap-1" onclick="event.stopPropagation()">
-                        <i class="fa-brands fa-whatsapp"></i> Chat
+                    <a href="${window.getWhatsAppLink(lead)}" target="_blank" class="bg-green-50 text-green-700 border border-green-200 hover:bg-green-500 hover:text-white px-2 py-1 rounded transition-colors text-xs flex items-center gap-1 font-medium shadow-sm" onclick="event.stopPropagation()">
+                        <i class="fa-brands fa-whatsapp"></i> Auto WA
                     </a>
                     <span class="text-[10px] text-gray-400 font-medium">${formatDate(lead.date) || '-'}</span>
                 </div>
@@ -1132,7 +1169,7 @@
                 tr.innerHTML = `
                     <td class="px-6 py-4 font-medium text-gray-900">${lead.name}</td>
                     <td class="px-6 py-4">
-                        <a href="https://wa.me/${lead.phone.replace(/^0/, '62')}" target="_blank" class="text-green-600 hover:text-green-800 flex items-center gap-1">
+                        <a href="${window.getWhatsAppLink(lead)}" target="_blank" class="text-green-600 hover:bg-green-50 hover:text-green-700 px-2 py-1 rounded flex items-center gap-1 transition-colors w-max font-medium">
                             <i class="fa-brands fa-whatsapp"></i> ${lead.phone}
                         </a>
                     </td>
@@ -1284,8 +1321,8 @@
                                 <p class="text-xs text-gray-500 mb-1">Status: ${lead.status} ${isOverdue ? '<span class="text-red-500 font-medium ml-1">(Terlewat)</span>' : ''}</p>
                             </div>
                         </div>
-                        <a href="https://wa.me/${lead.phone.replace(/^0/, '62')}" target="_blank" class="bg-green-100 text-green-700 hover:bg-green-200 p-2 rounded-md transition-colors text-xs font-medium">
-                            Hubungi
+                        <a href="${window.getWhatsAppLink(lead)}" target="_blank" class="bg-green-600 text-white hover:bg-green-700 p-2 rounded-md transition-colors text-xs font-medium shadow-sm flex items-center gap-1">
+                            <i class="fa-brands fa-whatsapp"></i> Kirim Pesan
                         </a>
                     `;
                     remindersContainer.appendChild(el);
