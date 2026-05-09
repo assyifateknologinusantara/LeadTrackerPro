@@ -6,6 +6,8 @@
     <title>Property Lead Tracker Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Tambahan library Chart.js untuk grafik omset admin -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body {
@@ -307,6 +309,9 @@
                     <!-- Admin Menus -->
                     <div id="nav-admin-menus" class="hidden mt-6 pt-6 border-t border-gray-200">
                         <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Admin Panel</p>
+                        <button onclick="switchTab('admin-revenue')" id="nav-admin-revenue" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-700 transition-colors text-sm font-medium mb-1">
+                            <i class="fa-solid fa-chart-line w-5 text-center"></i> Pendapatan Sistem
+                        </button>
                         <button onclick="switchTab('admin-users')" id="nav-admin-users" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-700 transition-colors text-sm font-medium">
                             <i class="fa-solid fa-users-cog w-5 text-center"></i> Kelola Pengguna
                         </button>
@@ -623,6 +628,48 @@
                     </div>
                 </div>
 
+                <!-- 7. ADMIN REVENUE DASHBOARD -->
+                <div id="view-admin-revenue" class="view-panel hidden block">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800"><i class="fa-solid fa-chart-line text-green-600 mr-2"></i> Pendapatan Sistem</h2>
+                            <p class="text-sm text-gray-500">Statistik omset dari agen yang upgrade ke Premium.</p>
+                        </div>
+                        <div class="flex bg-gray-100 p-1 rounded-lg border border-gray-200 shadow-inner">
+                            <button onclick="renderRevenueDashboard('today')" id="filter-rev-today" class="rev-filter px-4 py-1.5 text-sm font-medium rounded-md text-gray-600 hover:bg-white hover:shadow-sm transition-all">Hari Ini</button>
+                            <button onclick="renderRevenueDashboard('week')" id="filter-rev-week" class="rev-filter px-4 py-1.5 text-sm font-medium rounded-md text-gray-600 hover:bg-white hover:shadow-sm transition-all">7 Hari</button>
+                            <button onclick="renderRevenueDashboard('month')" id="filter-rev-month" class="rev-filter px-4 py-1.5 text-sm font-medium rounded-md text-gray-600 hover:bg-white hover:shadow-sm transition-all">Bulan Ini</button>
+                            <button onclick="renderRevenueDashboard('all')" id="filter-rev-all" class="rev-filter px-4 py-1.5 text-sm font-medium rounded-md bg-white shadow-sm text-gray-900 transition-all">Total Semua</button>
+                        </div>
+                    </div>
+
+                    <!-- Omset Summary Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                        <div class="bg-gradient-to-br from-green-500 to-emerald-600 p-6 rounded-2xl text-white shadow-lg shadow-green-200">
+                            <p class="text-green-100 text-sm font-medium mb-1 uppercase tracking-wider" id="rev-card-title">Total Omset</p>
+                            <h3 class="text-3xl font-bold flex items-center gap-1">Rp <span id="rev-total-amount">0</span></h3>
+                            <p class="text-xs text-green-200 mt-2">*Berdasarkan base price Rp 549.000</p>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-center">
+                            <p class="text-gray-500 text-sm font-medium mb-1">Agen Upgrade (Terfilter)</p>
+                            <h3 class="text-3xl font-bold text-gray-800" id="rev-total-users">0 <span class="text-sm font-normal text-gray-500">Agen</span></h3>
+                        </div>
+                        <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex flex-col justify-center">
+                            <p class="text-gray-500 text-sm font-medium mb-1">Konversi Premium</p>
+                            <h3 class="text-3xl font-bold text-indigo-600" id="rev-conversion-rate">0%</h3>
+                            <p class="text-xs text-gray-400 mt-1">Dari total pendaftar sistem</p>
+                        </div>
+                    </div>
+
+                    <!-- Revenue Chart -->
+                    <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                        <h3 class="font-bold text-gray-800 mb-4 border-b border-gray-100 pb-2">Grafik Tren Pemasukan</h3>
+                        <div class="relative h-72 w-full">
+                            <canvas id="revenueChartCanvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+
             </main>
         </div>
     </div>
@@ -892,7 +939,7 @@
                 document.getElementById('user-display-role').textContent = 'System Admin';
                 document.getElementById('user-avatar').innerHTML = '<i class="fa-solid fa-crown"></i>';
                 
-                switchTab('admin-users');
+                switchTab('admin-revenue'); // Buka tab pendapatan secara default
             }
         }
 
@@ -1139,6 +1186,7 @@
             }
 
             if(tabId === 'dashboard') updateDashboard();
+            if(tabId === 'admin-revenue') renderRevenueDashboard();
         };
 
         // --- Drag and Drop Logic (Kanban) ---
@@ -1530,6 +1578,7 @@
 
         // --- Admin Panel Logic ---
         let adminUsersCache = []; // Cache data pengguna untuk tab laporan
+        let adminRevenueChartInstance = null; // Variabel untuk menyimpan instance grafik
 
         function fetchUsersForAdmin() {
             if (state.role !== 'admin') return;
@@ -1592,6 +1641,11 @@
                 
                 // Refresh laporan otomatis setiap data user berubah
                 fetchReportsForAdmin();
+                
+                // Refresh data dashboard pendapatan jika tab tersebut sedang aktif
+                if(!document.getElementById('view-admin-revenue').classList.contains('hidden')){
+                    renderRevenueDashboard();
+                }
 
             }, (error) => {
                 console.error("Admin fetch error:", error);
@@ -1697,6 +1751,195 @@
 
         // Trigger filter otomatis saat dropdown dipilih admin
         document.getElementById('admin-user-filter').addEventListener('change', fetchReportsForAdmin);
+
+        // --- Logika Dashboard Pendapatan Admin ---
+        window.renderRevenueDashboard = (filterType = null) => {
+            if (state.role !== 'admin') return;
+
+            // Jika filterType tidak dikirim, ambil dari tombol yang sedang aktif, atau default 'all'
+            if (!filterType) {
+                const activeBtn = document.querySelector('.rev-filter.bg-white');
+                filterType = activeBtn ? activeBtn.id.replace('filter-rev-', '') : 'all';
+            }
+
+            // Update UI styling tombol filter
+            document.querySelectorAll('.rev-filter').forEach(btn => {
+                btn.classList.remove('bg-white', 'shadow-sm', 'text-gray-900');
+                btn.classList.add('text-gray-600');
+            });
+            const activeBtn = document.getElementById(`filter-rev-${filterType}`);
+            if(activeBtn) {
+                activeBtn.classList.add('bg-white', 'shadow-sm', 'text-gray-900');
+                activeBtn.classList.remove('text-gray-600');
+            }
+
+            const BASE_PRICE = 549000;
+            const now = new Date();
+            now.setHours(23, 59, 59, 999); // Akhir hari ini
+            
+            // Siapkan batas tanggal berdasarkan filter
+            let startDate = new Date(0); // Default 'all' (sejak awal waktu)
+            document.getElementById('rev-card-title').textContent = 'Total Omset Keseluruhan';
+
+            if (filterType === 'today') {
+                startDate = new Date(now);
+                startDate.setHours(0, 0, 0, 0);
+                document.getElementById('rev-card-title').textContent = 'Omset Hari Ini';
+            } else if (filterType === 'week') {
+                startDate = new Date(now);
+                startDate.setDate(now.getDate() - 6); // 7 hari terakhir termasuk hari ini
+                startDate.setHours(0, 0, 0, 0);
+                document.getElementById('rev-card-title').textContent = 'Omset 7 Hari Terakhir';
+            } else if (filterType === 'month') {
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1); // Tanggal 1 bulan ini
+                document.getElementById('rev-card-title').textContent = `Omset Bulan ${now.toLocaleDateString('id-ID', { month: 'long' })}`;
+            }
+
+            // Hitung Data Konversi Keseluruhan (sebelum di filter waktu)
+            const totalRegistered = adminUsersCache.length;
+            const totalPremiumEver = adminUsersCache.filter(u => u.status === 'premium').length;
+            const conversionRate = totalRegistered > 0 ? Math.round((totalPremiumEver / totalRegistered) * 100) : 0;
+            document.getElementById('rev-conversion-rate').textContent = `${conversionRate}%`;
+
+            // Filter data yang premium dan masuk dalam rentang waktu yang dipilih
+            let filteredRevenueData = [];
+            let totalFilteredRevenue = 0;
+            let totalFilteredUsers = 0;
+
+            // Struktur data untuk grafik: Map<LabelTanggal, JumlahRp>
+            let chartDataMap = new Map();
+
+            // Inisialisasi label kosong agar grafik tidak putus (khusus week dan month)
+            if (filterType === 'week') {
+                for(let i=0; i<7; i++){
+                    let d = new Date(startDate);
+                    d.setDate(d.getDate() + i);
+                    chartDataMap.set(d.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}), 0);
+                }
+            } else if (filterType === 'month') {
+                let daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                for(let i=1; i<=daysInMonth; i++){
+                    chartDataMap.set(`${i}`, 0);
+                }
+            }
+
+            adminUsersCache.forEach(user => {
+                // Pastikan status premium dan punya tanggal di-approve
+                if (user.status === 'premium' && user.approvedAt) {
+                    const approvedDate = new Date(user.approvedAt);
+                    
+                    if (approvedDate >= startDate && approvedDate <= now) {
+                        totalFilteredUsers++;
+                        totalFilteredRevenue += BASE_PRICE;
+
+                        // Tentukan format label grafik berdasarkan filter
+                        let label = '';
+                        if (filterType === 'today') {
+                            label = `${approvedDate.getHours()}:00`; // Per jam
+                        } else if (filterType === 'week') {
+                            label = approvedDate.toLocaleDateString('id-ID', {day: 'numeric', month: 'short'}); // Misal: 9 Mei
+                        } else if (filterType === 'month') {
+                            label = `${approvedDate.getDate()}`; // Angka tanggal saja
+                        } else {
+                            // Filter 'all' -> gabungkan per bulan
+                            label = approvedDate.toLocaleDateString('id-ID', {month: 'short', year: 'numeric'}); // Misal: Mei 2026
+                        }
+
+                        // Tambahkan nominal ke label yang sesuai
+                        let currentVal = chartDataMap.has(label) ? chartDataMap.get(label) : 0;
+                        chartDataMap.set(label, currentVal + BASE_PRICE);
+                    }
+                }
+            });
+
+            // Update Angka di Card
+            document.getElementById('rev-total-amount').textContent = new Intl.NumberFormat('id-ID').format(totalFilteredRevenue);
+            document.getElementById('rev-total-users').innerHTML = `${totalFilteredUsers} <span class="text-sm font-normal text-gray-500">Agen</span>`;
+
+            // Siapkan array untuk Chart.js
+            let labels = Array.from(chartDataMap.keys());
+            let dataPoints = Array.from(chartDataMap.values());
+
+            // Jika filter 'all', urutkan berdasarkan waktu kronologis
+            if (filterType === 'all') {
+                // Di sini labelnya format "Bulan Tahun", pengurutannya manual agak rumit di string, 
+                // tapi karena ini Map yang diisi berurutan dari data Firestore, biasanya sudah cukup urut. 
+                // Untuk kesederhanaan, kita langsung gunakan.
+            } else if (filterType === 'today') {
+                // Jika today tapi kosong, beri label jam sekarang saja
+                if(labels.length === 0) {
+                    labels = [`${now.getHours()}:00`];
+                    dataPoints = [0];
+                }
+            }
+
+            // Hapus grafik lama jika ada
+            if (adminRevenueChartInstance) {
+                adminRevenueChartInstance.destroy();
+            }
+
+            // Gambar Grafik Baru
+            const ctx = document.getElementById('revenueChartCanvas').getContext('2d');
+            adminRevenueChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Pendapatan (Rp)',
+                        data: dataPoints,
+                        borderColor: '#10b981', // emerald-500
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#10b981',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.4 // Membuat garis melengkung halus
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    if (context.parsed.y !== null) {
+                                        label += new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(context.parsed.y);
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value, index, values) {
+                                    if (value >= 1000000) return (value / 1000000) + ' Jt';
+                                    if (value >= 1000) return (value / 1000) + ' Rb';
+                                    return value;
+                                }
+                            },
+                            grid: {
+                                color: '#f3f4f6',
+                                drawBorder: false,
+                            }
+                        },
+                        x: {
+                            grid: { display: false, drawBorder: false }
+                        }
+                    }
+                }
+            });
+        };
 
     </script>
 </body>
