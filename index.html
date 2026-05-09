@@ -49,6 +49,16 @@
             backdrop-filter: blur(10px);
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
+        
+        /* CSS Untuk Fitur Print Laporan Admin */
+        @media print {
+            body * { visibility: hidden; }
+            #view-admin-reports, #view-admin-reports * { visibility: visible; }
+            #view-admin-reports { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; border: none; padding: 0; }
+            .no-print { display: none !important; }
+            .print\:block { display: block !important; }
+            .print\:text-xs { font-size: 0.75rem !important; }
+        }
     </style>
 </head>
 <body class="text-gray-800 antialiased h-screen overflow-hidden flex flex-col">
@@ -187,6 +197,53 @@
         </div>
     </div>
 
+    <!-- Upgrade Premium Modal (Triggered after 7 days trial) -->
+    <div id="upgrade-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-60 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl transform transition-all scale-100 opacity-100">
+            <div class="text-center mb-6">
+                <div class="bg-purple-100 text-purple-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-crown text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900">Masa Trial Habis</h3>
+                <p class="text-sm text-gray-500 mt-2">Waktu percobaan 7 hari Anda telah berakhir. Segera Upgrade ke Premium untuk membuka kunci sistem selamanya.</p>
+            </div>
+            
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6 text-center">
+                <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold mb-1">Total Biaya Upgrade</p>
+                <div class="text-3xl font-bold text-purple-600 flex items-center justify-center gap-1">
+                    <span>Rp</span> <span id="upgrade-amount">549.000</span>
+                </div>
+                <p class="text-xs text-red-500 mt-1 italic">*Mohon transfer tepat hingga 3 digit terakhir!</p>
+            </div>
+
+            <div class="space-y-4 mb-6">
+                <div class="bg-white border border-gray-200 rounded-lg p-3 flex justify-between items-center">
+                    <div>
+                        <p class="text-sm font-bold text-gray-900">BCA</p>
+                        <p class="text-lg font-mono text-gray-700">574 545 2563</p>
+                        <p class="text-xs text-gray-500">a.n Hardi Hanto</p>
+                    </div>
+                    <button onclick="copyToClipboard('5745452563')" class="text-indigo-600 hover:bg-indigo-50 p-2 rounded-md transition-colors"><i class="fa-regular fa-copy"></i></button>
+                </div>
+                <div class="bg-white border border-gray-200 rounded-lg p-3 flex justify-between items-center">
+                    <div>
+                        <p class="text-sm font-bold text-gray-900">BSI</p>
+                        <p class="text-lg font-mono text-gray-700">989 786 7570</p>
+                        <p class="text-xs text-gray-500">a.n Hardi Hanto</p>
+                    </div>
+                    <button onclick="copyToClipboard('9897867570')" class="text-indigo-600 hover:bg-indigo-50 p-2 rounded-md transition-colors"><i class="fa-regular fa-copy"></i></button>
+                </div>
+            </div>
+
+            <button onclick="confirmUpgradeWA()" class="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-3 rounded-lg transition-colors flex items-center justify-center gap-2 mb-3 shadow-lg shadow-green-200">
+                <i class="fa-brands fa-whatsapp text-xl"></i> Konfirmasi ke Admin (Kirim Bukti)
+            </button>
+            <button id="btn-logout-upgrade" class="w-full text-gray-500 hover:text-gray-800 text-sm font-medium underline py-2">
+                Keluar Akun
+            </button>
+        </div>
+    </div>
+
     <!-- Pending Approval View -->
     <div id="pending-view" class="fixed inset-0 z-30 bg-gray-50 flex items-center justify-center hidden">
         <div class="text-center max-w-md p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
@@ -229,7 +286,7 @@
         <!-- Main Content Area -->
         <div class="flex flex-1 overflow-hidden">
             <!-- Sidebar -->
-            <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0">
+            <aside class="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0 no-print">
                 <nav class="flex-1 p-4 space-y-1">
                     <!-- User Menus -->
                     <div id="nav-user-menus">
@@ -253,6 +310,9 @@
                         <button onclick="switchTab('admin-users')" id="nav-admin-users" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-700 transition-colors text-sm font-medium">
                             <i class="fa-solid fa-users-cog w-5 text-center"></i> Kelola Pengguna
                         </button>
+                        <button onclick="switchTab('admin-reports')" id="nav-admin-reports" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-700 transition-colors text-sm font-medium mt-1">
+                            <i class="fa-solid fa-file-invoice w-5 text-center"></i> Laporan & Leads
+                        </button>
                     </div>
                 </nav>
                 
@@ -267,6 +327,20 @@
             <!-- Content Wrapper -->
             <main class="flex-1 overflow-y-auto bg-gray-50 p-6 relative">
                 
+                <!-- Trial Banner Info -->
+                <div id="trial-banner" class="hidden bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg mb-6 flex flex-col sm:flex-row justify-between items-center shadow-sm gap-3">
+                    <div class="flex items-center gap-3">
+                        <i class="fa-solid fa-stopwatch text-yellow-600 text-xl animate-pulse"></i>
+                        <div>
+                            <p class="text-sm font-bold text-yellow-900">Mode Trial Aktif</p>
+                            <p class="text-xs" id="trial-text">Sisa waktu trial Anda: 7 Hari.</p>
+                        </div>
+                    </div>
+                    <button onclick="showUpgradeModalManual()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 py-2 rounded-md text-xs font-bold transition-colors shadow-md whitespace-nowrap">
+                        <i class="fa-solid fa-crown mr-1"></i> UPGRADE PREMIUM
+                    </button>
+                </div>
+
                 <!-- 1. DASHBOARD & STATS VIEW -->
                 <div id="view-dashboard" class="view-panel block">
                     <h2 class="text-2xl font-bold text-gray-800 mb-6">Ringkasan Performa</h2>
@@ -480,7 +554,7 @@
 
                 <!-- 5. ADMIN VIEW -->
                 <div id="view-admin-users" class="view-panel hidden flex flex-col h-full">
-                    <div class="flex justify-between items-center mb-6 shrink-0">
+                    <div class="flex justify-between items-center mb-6 shrink-0 no-print">
                         <div>
                             <h2 class="text-2xl font-bold text-red-700 flex items-center gap-2"><i class="fa-solid fa-shield-halved"></i> Admin Panel</h2>
                             <p class="text-sm text-gray-500">Kelola pendaftaran agen dan akses sistem.</p>
@@ -494,9 +568,9 @@
                                     <tr>
                                         <th class="px-6 py-4 font-semibold">Nama Agen</th>
                                         <th class="px-6 py-4 font-semibold">Email</th>
-                                        <th class="px-6 py-4 font-semibold">Status</th>
+                                        <th class="px-6 py-4 font-semibold">Status / Mode</th>
                                         <th class="px-6 py-4 font-semibold">Tgl Daftar</th>
-                                        <th class="px-6 py-4 font-semibold text-right">Aksi</th>
+                                        <th class="px-6 py-4 font-semibold text-right">Aksi & Approval</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100" id="table-users-body">
@@ -504,6 +578,48 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+
+                <!-- 6. ADMIN REPORTS VIEW -->
+                <div id="view-admin-reports" class="view-panel hidden flex flex-col h-full bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex justify-between items-center mb-6 shrink-0 no-print">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800"><i class="fa-solid fa-file-invoice text-indigo-600 mr-2"></i> Laporan Leads Keseluruhan</h2>
+                            <p class="text-sm text-gray-500">Pantau dan cetak laporan pipeline semua agen yang mendaftar.</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <select id="admin-user-filter" class="border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 shadow-sm font-medium">
+                                <option value="all">-- Semua Agen --</option>
+                            </select>
+                            <button onclick="window.print()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shadow-sm">
+                                <i class="fa-solid fa-print"></i> Cetak PDF / Print
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Print Header (Hidden on screen) -->
+                    <div class="hidden print:block text-center mb-6 border-b border-gray-300 pb-4">
+                        <h1 class="text-2xl font-bold text-gray-900 uppercase">Laporan Database Leads Agen</h1>
+                        <p class="text-gray-500 mt-1" id="print-date"></p>
+                    </div>
+
+                    <div class="overflow-x-auto flex-1 border border-gray-100 rounded-lg">
+                        <table class="w-full text-left text-sm whitespace-nowrap print:text-xs">
+                            <thead class="bg-gray-100 text-gray-700 border-b border-gray-200">
+                                <tr>
+                                    <th class="px-5 py-3 font-semibold">Nama Agen</th>
+                                    <th class="px-5 py-3 font-semibold">Nama Prospek (Lead)</th>
+                                    <th class="px-5 py-3 font-semibold">Kontak</th>
+                                    <th class="px-5 py-3 font-semibold">Properti Minat</th>
+                                    <th class="px-5 py-3 font-semibold">Status Saat Ini</th>
+                                    <th class="px-5 py-3 font-semibold">Tanggal Masuk</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100" id="table-admin-reports-body">
+                                <tr><td colspan="6" class="text-center py-10 text-gray-400">Pilih agen untuk memuat data...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -729,17 +845,22 @@
             loginForm: document.getElementById('login-form'),
             regForm: document.getElementById('register-form'),
             paymentModal: document.getElementById('payment-modal'),
+            upgradeModal: document.getElementById('upgrade-modal'), // Modal Upgrade
             pendingView: document.getElementById('pending-view'),
             app: document.getElementById('app-view'),
             adminMenus: document.getElementById('nav-admin-menus'),
             quickAdd: document.getElementById('quick-add-container'),
+            trialBanner: document.getElementById('trial-banner'), // Banner info Trial
+            trialText: document.getElementById('trial-text')
         };
 
         function switchMainView(viewType) {
             ui.auth.classList.add('hidden');
             ui.paymentModal.classList.add('hidden');
+            ui.upgradeModal.classList.add('hidden');
             ui.pendingView.classList.add('hidden');
             ui.app.classList.add('hidden');
+            ui.trialBanner.classList.add('hidden');
 
             if (viewType === 'login') {
                 ui.auth.classList.remove('hidden');
@@ -747,6 +868,8 @@
                 ui.regForm.classList.add('hidden');
             } else if (viewType === 'payment') {
                 ui.paymentModal.classList.remove('hidden');
+            } else if (viewType === 'upgrade') {
+                ui.upgradeModal.classList.remove('hidden');
             } else if (viewType === 'pending') {
                 ui.pendingView.classList.remove('hidden');
             } else if (viewType === 'app') {
@@ -800,69 +923,84 @@
                 state.user = user;
                 
                 // --- PERBAIKAN LOGIKA LOGIN ADMIN ---
-                // Jika user login secara anonim, PASTI dia adalah Admin.
                 if (user.isAnonymous) {
                     state.role = 'admin';
                     switchMainView('admin');
                     fetchUsersForAdmin();
-                    return; // Hentikan eksekusi di sini agar tidak memproses logika profil agent
+                    fetchReportsForAdmin(); // Otomatis load tab laporan
+                    return; 
                 }
-                // -------------------------------------
 
                 // Jika bukan anonim (Agent/User biasa):
                 try {
-                    // Fetch profile to check approval status
                     const userDocRef = doc(db, 'artifacts', APP_ID, 'system', 'users', 'profiles', user.uid);
                     const userDoc = await getDoc(userDocRef);
                     
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
                         document.getElementById('user-display-name').textContent = userData.name || 'Agent';
-                        document.getElementById('user-display-role').textContent = 'Agent Properti';
+                        
+                        // Set text role berdasarkan premium / trial
+                        document.getElementById('user-display-role').textContent = userData.status === 'premium' ? 'Agen Premium' : 'Agen (Trial)';
                         document.getElementById('user-avatar').textContent = (userData.name ? userData.name.charAt(0) : 'A').toUpperCase();
 
-                        if (userData.status === 'approved') {
+                        if (userData.status === 'premium') {
+                            // User Premium bebas akses
                             state.role = 'agent';
                             switchMainView('app');
-                        } else {
-                            // Cek apakah baru daftar (butuh payment popup) atau sudah di pending view
-                            if(userData.status === 'pending_payment') {
-                                // Generate random 3 digits for unique payment
+                        } else if (userData.status === 'trial') {
+                            // Cek masa aktif Trial
+                            const now = new Date();
+                            const trialEnd = new Date(userData.trialEndsAt);
+                            
+                            if (now > trialEnd) {
+                                // TRIAL HABIS -> Kunci Sistem!
                                 const uniqueCode = Math.floor(Math.random() * 900) + 100;
-                                const total = 349000 + uniqueCode;
-                                document.getElementById('payment-amount').textContent = new Intl.NumberFormat('id-ID').format(total);
-                                switchMainView('payment');
+                                const total = 549000 + uniqueCode;
+                                document.getElementById('upgrade-amount').textContent = new Intl.NumberFormat('id-ID').format(total);
+                                switchMainView('upgrade');
                                 
-                                // Update status so payment doesn't show again unnecessarily
-                                await updateDoc(doc(db, 'artifacts', APP_ID, 'system', 'users', 'profiles', user.uid), {
-                                    status: 'pending_approval'
-                                });
+                                // Update status ke expired di database
+                                await updateDoc(userDocRef, { status: 'expired' });
                             } else {
-                                switchMainView('pending');
+                                // TRIAL MASIH AKTIF -> Tampilkan sisa hari
+                                const diffTime = Math.abs(trialEnd - now);
+                                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                ui.trialText.textContent = `Sisa waktu trial Anda: ${diffDays} Hari.`;
+                                
+                                state.role = 'agent';
+                                switchMainView('app');
+                                ui.trialBanner.classList.remove('hidden'); // Munculkan Banner Kuning
                             }
+                        } else if (userData.status === 'expired') {
+                            // Sudah terdeteksi habis sebelumnya
+                            const uniqueCode = Math.floor(Math.random() * 900) + 100;
+                            const total = 549000 + uniqueCode;
+                            document.getElementById('upgrade-amount').textContent = new Intl.NumberFormat('id-ID').format(total);
+                            switchMainView('upgrade');
+                        } else {
+                            // Fallback jika status lama (pending payment)
+                            switchMainView('pending');
                         }
                     } else {
-                        // Profil tidak ditemukan di Firestore, tapi user berhasil login (kemungkinan error saat daftar sebelumnya)
                         console.warn("Profil tidak ditemukan, membuat ulang...");
                         
-                        // Buat profil darurat agar muncul di admin
+                        // Set default Trial 7 Hari untuk fix profile error
+                        const trialEnd = new Date();
+                        trialEnd.setDate(trialEnd.getDate() + 7);
+
                         await setDoc(userDocRef, {
-                            name: user.email.split('@')[0], // Gunakan bagian depan email sebagai nama sementara
+                            name: user.email.split('@')[0],
                             email: user.email,
-                            status: 'pending_payment',
-                            createdAt: new Date().toISOString()
+                            status: 'trial',
+                            createdAt: new Date().toISOString(),
+                            trialEndsAt: trialEnd.toISOString()
                         });
                         
-                        // Setelah dibuat, tampilkan pembayaran
-                        const uniqueCode = Math.floor(Math.random() * 900) + 100;
-                        const total = 349000 + uniqueCode;
-                        document.getElementById('payment-amount').textContent = new Intl.NumberFormat('id-ID').format(total);
-                        switchMainView('payment');
-                        
-                        // Update status
-                        await updateDoc(userDocRef, {
-                            status: 'pending_approval'
-                        });
+                        ui.trialText.textContent = `Sisa waktu trial Anda: 7 Hari.`;
+                        state.role = 'agent';
+                        switchMainView('app');
+                        ui.trialBanner.classList.remove('hidden');
                     }
                 } catch (error) {
                     console.error("Error fetching user profile:", error);
@@ -894,15 +1032,20 @@
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // Create user profile in Firestore
+                // Hitung Tanggal Trial 7 Hari
+                const trialEnd = new Date();
+                trialEnd.setDate(trialEnd.getDate() + 7);
+
+                // Create user profile in Firestore (LANGSUNG MODE TRIAL)
                 await setDoc(doc(db, 'artifacts', APP_ID, 'system', 'users', 'profiles', user.uid), {
                     name: name,
                     email: email,
-                    status: 'pending_payment', // Initial status
-                    createdAt: new Date().toISOString()
+                    status: 'trial', 
+                    createdAt: new Date().toISOString(),
+                    trialEndsAt: trialEnd.toISOString()
                 });
                 
-                // UI changes handled by onAuthStateChanged
+                // UI changes handled automatically by onAuthStateChanged
             } catch (error) {
                 let msg = "Pendaftaran gagal.";
                 if(error.code === 'auth/email-already-in-use') msg = "Email sudah terdaftar.";
@@ -953,8 +1096,23 @@
         };
         document.getElementById('btn-logout').addEventListener('click', handleLogout);
         document.getElementById('btn-logout-pending').addEventListener('click', handleLogout);
+        document.getElementById('btn-logout-upgrade').addEventListener('click', handleLogout);
 
-        // Payment Close
+        // Helper WA Upgrade Payment Manual
+        window.confirmUpgradeWA = () => {
+            const email = state.user ? state.user.email : '';
+            const text = encodeURIComponent(`Halo Admin, saya ingin konfirmasi pembayaran Upgrade Premium untuk aplikasi Lead Tracker Pro.\nEmail Akun: ${email}\n[Lampirkan Bukti Transfer Anda di sini]`);
+            window.open(`https://wa.me/6285129462992?text=${text}`, '_blank');
+        };
+
+        window.showUpgradeModalManual = () => {
+            const uniqueCode = Math.floor(Math.random() * 900) + 100;
+            const total = 549000 + uniqueCode;
+            document.getElementById('upgrade-amount').textContent = new Intl.NumberFormat('id-ID').format(total);
+            switchMainView('upgrade');
+        };
+
+        // Payment Close (Sistem Lama)
         document.getElementById('btn-close-payment').addEventListener('click', () => {
             switchMainView('pending');
         });
@@ -1371,6 +1529,8 @@
         document.getElementById('calc-tax').addEventListener('input', calculateCommission);
 
         // --- Admin Panel Logic ---
+        let adminUsersCache = []; // Cache data pengguna untuk tab laporan
+
         function fetchUsersForAdmin() {
             if (state.role !== 'admin') return;
 
@@ -1378,7 +1538,11 @@
             
             state.unsubscribeUsers = onSnapshot(usersRef, (snapshot) => {
                 const tbody = document.getElementById('table-users-body');
+                const filterSelect = document.getElementById('admin-user-filter');
+                
                 tbody.innerHTML = '';
+                filterSelect.innerHTML = '<option value="all">-- Semua Agen --</option>'; // Reset dropdown
+                adminUsersCache = [];
                 
                 if(snapshot.empty) {
                     tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Belum ada agen terdaftar.</td></tr>`;
@@ -1387,23 +1551,35 @@
 
                 snapshot.forEach(docSnap => {
                     const user = { uid: docSnap.id, ...docSnap.data() };
+                    adminUsersCache.push(user);
                     
+                    // Tambah data ke Dropdown Filter Cetak Laporan
+                    const option = document.createElement('option');
+                    option.value = user.uid;
+                    option.textContent = `${user.name} (${user.email})`;
+                    filterSelect.appendChild(option);
+
                     let statusBadge = '';
                     let actionBtn = '';
                     
-                    if (user.status === 'pending_payment') {
-                        statusBadge = '<span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-medium">Belum Bayar</span>';
-                        actionBtn = '-';
-                    } else if (user.status === 'pending_approval') {
-                        statusBadge = '<span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-medium animate-pulse">Menunggu Approval</span>';
-                        actionBtn = `<button onclick="approveUser('${user.uid}')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-xs font-medium transition-colors">Approve</button>`;
-                    } else if (user.status === 'approved') {
-                        statusBadge = '<span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">Aktif</span>';
-                        actionBtn = `<button onclick="revokeUser('${user.uid}')" class="text-red-500 hover:bg-red-50 px-2 py-1 rounded text-xs font-medium border border-transparent hover:border-red-200 transition-colors">Cabut Akses</button>`;
+                    // Logic Status Trial / Premium
+                    if (user.status === 'trial') {
+                        statusBadge = '<span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">Berjalan (Trial)</span>';
+                        actionBtn = `<button onclick="approveUser('${user.uid}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors shadow-sm"><i class="fa-solid fa-crown mr-1"></i> Jadikan Premium</button>`;
+                    } else if (user.status === 'expired') {
+                        statusBadge = '<span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold">Terkunci (Trial Habis)</span>';
+                        actionBtn = `<button onclick="approveUser('${user.uid}')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors shadow-sm"><i class="fa-solid fa-check mr-1"></i> Approve Bukti Tf (Premium)</button>`;
+                    } else if (user.status === 'premium') {
+                        statusBadge = '<span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold"><i class="fa-solid fa-crown mr-1"></i> Premium</span>';
+                        actionBtn = `<button onclick="revokeUser('${user.uid}')" class="text-red-500 hover:bg-red-50 px-2 py-1 rounded text-xs font-medium border border-transparent hover:border-red-200 transition-colors">Kunci Akses</button>`;
+                    } else {
+                        // Fallback data lama
+                        statusBadge = '<span class="bg-gray-100 text-gray-600 px-2 py-1 rounded text-xs font-medium">Pending Data Lama</span>';
+                        actionBtn = `<button onclick="approveUser('${user.uid}')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-xs font-medium transition-colors">Approve Data Lama</button>`;
                     }
 
                     const tr = document.createElement('tr');
-                    tr.className = 'hover:bg-gray-50';
+                    tr.className = 'hover:bg-gray-50 transition-colors';
                     tr.innerHTML = `
                         <td class="px-6 py-4 font-medium text-gray-900">${user.name}</td>
                         <td class="px-6 py-4 text-gray-600">${user.email}</td>
@@ -1413,6 +1589,10 @@
                     `;
                     tbody.appendChild(tr);
                 });
+                
+                // Refresh laporan otomatis setiap data user berubah
+                fetchReportsForAdmin();
+
             }, (error) => {
                 console.error("Admin fetch error:", error);
                 showToast("Gagal memuat data pengguna", "error");
@@ -1420,13 +1600,13 @@
         }
 
         window.approveUser = async (uid) => {
-            if(confirm("Approve agen ini? Mereka akan mendapat akses ke aplikasi.")) {
+            if(confirm("Apakah Anda yakin ingin memberikan akses Premium (Tanpa Batas Waktu) kepada agen ini?")) {
                 try {
                     await updateDoc(doc(db, 'artifacts', APP_ID, 'system', 'users', 'profiles', uid), {
-                        status: 'approved',
+                        status: 'premium',
                         approvedAt: new Date().toISOString()
                     });
-                    showToast("Agen berhasil di-approve", "success");
+                    showToast("Agen berhasil ditingkatkan ke Premium!", "success");
                 } catch(err) {
                     showToast("Gagal approve agen", "error");
                 }
@@ -1434,17 +1614,89 @@
         };
 
         window.revokeUser = async (uid) => {
-            if(confirm("Cabut akses agen ini? Mereka tidak akan bisa masuk ke dashboard.")) {
+            if(confirm("Cabut akses premium agen ini? Sistem mereka akan terkunci dan akan diminta Upgrade 549rb lagi.")) {
                 try {
                     await updateDoc(doc(db, 'artifacts', APP_ID, 'system', 'users', 'profiles', uid), {
-                        status: 'pending_payment' // Revert to initial state essentially
+                        status: 'expired' // Ubah jadi expired agar terkunci
                     });
-                    showToast("Akses agen dicabut", "success");
+                    showToast("Akses Premium telah dicabut", "success");
                 } catch(err) {
                     showToast("Gagal mencabut akses", "error");
                 }
             }
         };
+
+        // --- Fitur Baru: Laporan Leads Semua Pengguna di Admin ---
+        async function fetchReportsForAdmin() {
+            if (state.role !== 'admin') return;
+            
+            const tbody = document.getElementById('table-admin-reports-body');
+            const filterUid = document.getElementById('admin-user-filter').value;
+            
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-gray-500"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengumpulkan data leads dari database...</td></tr>';
+            
+            // Set tanggal cetak di laporan PDF
+            document.getElementById('print-date').textContent = "Tanggal Cetak: " + new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+            let allLeads = [];
+            
+            try {
+                // Tentukan siapa yang akan difetch berdasarkan dropdown filter
+                const usersToFetch = filterUid === 'all' ? adminUsersCache : adminUsersCache.filter(u => u.uid === filterUid);
+                
+                // Looping untuk ambil lead tiap-tiap agen
+                for (const user of usersToFetch) {
+                    const leadsRef = collection(db, 'artifacts', APP_ID, 'users', user.uid, 'leads');
+                    const leadsSnap = await getDocs(leadsRef);
+                    leadsSnap.forEach(docSnap => {
+                        allLeads.push({ 
+                            id: docSnap.id, 
+                            agentName: user.name, // Tempelkan nama agen untuk identitas
+                            ...docSnap.data() 
+                        });
+                    });
+                }
+                
+                // Urutkan berdasarkan tanggal masuk lead paling baru
+                allLeads.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                
+                tbody.innerHTML = '';
+                
+                if (allLeads.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-gray-500">Belum ada data leads yang bisa ditampilkan.</td></tr>`;
+                    return;
+                }
+
+                allLeads.forEach(lead => {
+                    let statusColor = 'text-gray-600 bg-gray-100';
+                    if(lead.status === 'Baru') statusColor = 'text-blue-700 bg-blue-100';
+                    else if(lead.status === 'Follow Up') statusColor = 'text-yellow-700 bg-yellow-100';
+                    else if(lead.status === 'Survey') statusColor = 'text-indigo-700 bg-indigo-100';
+                    else if(lead.status === 'Nego') statusColor = 'text-orange-700 bg-orange-100';
+                    else if(lead.status === 'Closing') statusColor = 'text-green-700 bg-green-100';
+                    else if(lead.status === 'Batal') statusColor = 'text-red-700 bg-red-100';
+
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50 border-b border-gray-50';
+                    tr.innerHTML = `
+                        <td class="px-5 py-3 font-medium text-gray-900 bg-gray-50/50"><i class="fa-solid fa-user-tie text-gray-400 mr-2 no-print"></i>${lead.agentName}</td>
+                        <td class="px-5 py-3 text-gray-800 font-semibold">${lead.name}</td>
+                        <td class="px-5 py-3 text-gray-600 font-mono text-xs">${lead.phone}</td>
+                        <td class="px-5 py-3 text-gray-600 truncate max-w-[150px]" title="${lead.property}">${lead.property || '-'}</td>
+                        <td class="px-5 py-3"><span class="px-2 py-1 rounded text-[10px] uppercase tracking-wider font-bold ${statusColor}">${lead.status}</span></td>
+                        <td class="px-5 py-3 text-gray-500 text-xs">${formatDate(lead.createdAt)}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } catch (error) {
+                console.error("Error fetching admin reports:", error);
+                tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-10 text-center text-red-500">Gagal mengumpulkan data laporan.</td></tr>`;
+            }
+        }
+
+        // Trigger filter otomatis saat dropdown dipilih admin
+        document.getElementById('admin-user-filter').addEventListener('change', fetchReportsForAdmin);
 
     </script>
 </body>
