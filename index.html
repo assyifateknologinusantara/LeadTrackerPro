@@ -780,7 +780,8 @@
                             }
                         }
                     } else {
-                        // User exists in auth but no profile (shouldn't happen in normal flow)
+                        // User exists in auth but no profile (shouldn't happen in normal flow, except maybe old test accounts)
+                        console.warn("User logged in but profile not found in Firestore.");
                         auth.signOut();
                     }
                 } catch (error) {
