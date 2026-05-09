@@ -6,6 +6,7 @@
     <title>Property Lead Tracker Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Tambahan library Chart.js untuk grafik omset admin -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -35,6 +36,7 @@
             background-color: #e2e8f0;
             border: 2px dashed #94a3b8;
         }
+        /* Background image for login */
         .login-bg {
             background-image: url('https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
             background-size: cover;
@@ -823,7 +825,7 @@
                 if (diffDays === 0) pesan = `Halo Kak ${nama}, salam kenal! 🙏 Saya agen properti resmi. Terima kasih atas ketertarikan Kakak terhadap ${properti}. Apakah ada detail spesifik yang ingin Kakak ketahui (misal: harga, lokasi, atau cicilan)?`;
                 else if (diffDays === 1) pesan = `Selamat pagi Kak ${nama}, semoga harinya menyenangkan! 😊 Melanjutkan info kemarin terkait ${properti}, ini saya lampirkan e-brosur terbarunya ya Kak. Boleh dicek dulu.`;
                 else if (diffDays === 2) pesan = `Halo Kak ${nama}! Kebetulan weekend ini kami ada acara Survey Serentak di lokasi ${properti}. Kira-kira Kakak ada waktu luang untuk mampir melihat unit contohnya langsung? 🏡`;
-                else if (diffDays >= 3 && diffDays <= 6) pesan = `Halo Kak ${nama, izin update ya kak. 🚀 Alhamdulillah baru saja ada unit ${properti} yang Sold Out. Kalau Kakak masih mempertimbangkan, kabari saya ya agar unit incarannya bisa saya keep dulu.`;
+                else if (diffDays >= 3 && diffDays <= 6) pesan = `Halo Kak ${nama}, izin update ya kak. 🚀 Alhamdulillah baru saja ada unit ${properti} yang Sold Out. Kalau Kakak masih mempertimbangkan, kabari saya ya agar unit incarannya bisa saya keep dulu.`;
                 else if (diffDays >= 7 && diffDays <= 12) pesan = `Halo Kak ${nama}. Khusus minggu ini, developer ${properti} sedang ada promo spesial. Boleh saya telepon sebentar untuk jelaskan promonya? 🎁`;
                 else pesan = `Halo Kak ${nama}, mohon maaf jika saya mengganggu. Karena belum ada kabar lanjutan terkait ${properti}, saya asumsikan Kakak menunda pembeliannya. File penawarannya saya tutup dulu ya kak di sistem. Sukses selalu untuk Kakak! ✨`;
             } else {
